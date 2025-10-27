@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "658971748459",
+    "project_id": "loom-social",
+    "storage_bucket": "loom-social.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:658971748459:android:44ac7191c60f3e622fa92e",
+        "android_client_info": {
+          "package_name": "com.rudra.loom"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEe28xgu8Xro0GJ6jvaeDmy2XCwK6C7RY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
