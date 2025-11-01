@@ -1,35 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/auth/presentation/components/my_button.dart';
 import 'package:loom/features/auth/presentation/components/my_text_field.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
 
-class LoginPage extends StatefulWidget {
+class RegisterPage extends StatefulWidget {
   final void Function()? togglePages;
-  const LoginPage({super.key, required this.togglePages});
+  const RegisterPage({super.key, required this.togglePages});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
   // text editing controllers
+  final nameController = TextEditingController();
   final emailController = TextEditingController();
   final pwController = TextEditingController();
+  final confirmPwController = TextEditingController();
 
-  // login button pressed
-  void login() {
-    // prepare email pw
+  // register button pressed
+  void register() {
+    // prepare name, email, pw, confirm pw
+    final String name = nameController.text;
     final String email = emailController.text;
     final String pw = pwController.text;
+    final String confirmPw = confirmPwController.text;
 
     // auth cubit
     final authCubit = context.read<AuthCubit>();
 
     // ensure that the email and password are not empty
-    if (email.isNotEmpty && pw.isNotEmpty) {
-      // call login method from auth cubit
-      authCubit.login(email, pw);
+    if (name.isNotEmpty &&
+        email.isNotEmpty &&
+        pw.isNotEmpty &&
+        confirmPw.isNotEmpty) {
+      if (pw == confirmPw) {
+        // call register method from auth cubit
+        authCubit.register(name, email, pw);
+      } else {
+        // show snackbar
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
+      }
     } else {
       // show snackbar
       ScaffoldMessenger.of(context).showSnackBar(
@@ -40,8 +54,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
+    nameController.dispose();
     emailController.dispose();
     pwController.dispose();
+    confirmPwController.dispose();
     super.dispose();
   }
 
@@ -64,9 +80,9 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 50),
 
-                // welcome back msg
+                // create account msg
                 Text(
-                  "Welcome back, you've been missed!",
+                  "Let's create an account for you!",
                   style: TextStyle(
                     fontSize: 16,
                     color: Theme.of(context).colorScheme.primary,
@@ -74,6 +90,15 @@ class _LoginPageState extends State<LoginPage> {
                 ),
 
                 const SizedBox(height: 25),
+
+                // email textfield
+                MyTextField(
+                  controller: nameController,
+                  hintText: "Name",
+                  obscureText: false,
+                ),
+
+                const SizedBox(height: 15),
 
                 // email textfield
                 MyTextField(
@@ -91,27 +116,37 @@ class _LoginPageState extends State<LoginPage> {
                   obscureText: true,
                 ),
 
+                const SizedBox(height: 15),
+
+                // password textfield
+                MyTextField(
+                  controller: confirmPwController,
+                  hintText: "Confirm Password",
+                  obscureText: true,
+                ),
+
                 const SizedBox(height: 30),
 
-                // login button
-                MyButton(onTap: login, text: "Login"),
+                // login button (example placeholder)
+                MyButton(onTap: register, text: "Register"),
 
                 const SizedBox(height: 20),
 
-                // not a member? register now
+                // alr a member? login now
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Not a member? ",
+                      "Already a member? ",
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
+
                     GestureDetector(
                       onTap: widget.togglePages,
                       child: Text(
-                        "Register now",
+                        "Login now",
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
