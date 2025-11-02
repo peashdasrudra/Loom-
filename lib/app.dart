@@ -6,7 +6,7 @@ import 'package:loom/features/auth/data/firebase_auth_repo.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_states.dart';
 import 'package:loom/features/auth/presentation/pages/auth_page.dart';
-import 'package:loom/features/post/presentation/pages/home_page.dart';
+import 'package:loom/features/home/presentation/pages/home_page.dart';
 import 'package:loom/themes/light_mode.dart';
 
 /* APP -> Root Level

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/auth/presentation/components/my_button.dart';
 import 'package:loom/features/auth/presentation/components/my_text_field.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
+import 'package:lottie/lottie.dart';
 
 class RegisterPage extends StatefulWidget {
   final void Function()? togglePages;
@@ -72,13 +73,19 @@ class _RegisterPageState extends State<RegisterPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // logo
-                Icon(
-                  Icons.lock_open_rounded,
-                  size: 80,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                Image.asset('assets/images/Logo_Lockup.jpg', height: 80),
 
                 const SizedBox(height: 50),
+
+                Center(
+                  child: Lottie.network(
+                    'https://lottie.host/a5abeac1-fdc0-4a31-a418-688f47094b96/wzepsMUj7x.json',
+                    height: 120,
+                    width: 150,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
 
                 // create account msg
                 Text(
