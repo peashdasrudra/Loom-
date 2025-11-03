@@ -4,8 +4,9 @@ import 'package:loom/app.dart';
 import 'package:loom/config/firebase_options.dart';
 
 void main() async {
+
   // Firebase initialization
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp( MyApp());
+  runApp(MyApp());
 }
