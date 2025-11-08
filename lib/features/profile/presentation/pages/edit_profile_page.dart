@@ -40,7 +40,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [CircularProgressIndicator(), Text('Updating...')],
+                children: [
+                  CircularProgressIndicator(),
+                  const SizedBox(height: 10),
+                  Text('Updating...'),
+                ],
               ),
             ),
           );

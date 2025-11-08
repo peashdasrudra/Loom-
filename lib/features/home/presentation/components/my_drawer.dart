@@ -37,7 +37,7 @@ class MyDrawer extends StatelessWidget {
 
               // profile tile
               MyDrawerTile(
-                title: 'P O F I L E',
+                title: 'P R O F I L E',
                 icon: Icons.person,
                 onTap: () {
                   // pop menu drawer
@@ -72,8 +72,7 @@ class MyDrawer extends StatelessWidget {
               ),
 
               // about tile
-              MyDrawerTile(title: 'A B O U T', icon: Icons.info, onTap: () {}),
-
+               MyDrawerTile(title: 'A B O U T', icon: Icons.info, onTap: () {}),
               const Spacer(),
 
               // logout tile

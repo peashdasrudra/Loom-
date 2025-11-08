@@ -17,11 +17,13 @@ class BioBox extends StatelessWidget {
 
       width: double.infinity,
 
-      child: Text(
-        text.isNotEmpty ? text : 'No bio available...',
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.inversePrimary,
-          fontSize: 16.0,
+      child: Center(
+        child: Text(
+          text.isNotEmpty ? text : 'No bio available...',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.inversePrimary,
+            fontSize: 16.0,
+          ),
         ),
       ),
     );

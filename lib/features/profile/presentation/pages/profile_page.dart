@@ -56,7 +56,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       builder: (context) => EditProfilePage(user: user),
                     ),
                   ),
-                  icon: Icon(Icons.settings),
+                  icon: Icon(Icons.edit),
                 ),
               ],
             ),
@@ -130,10 +130,10 @@ class _ProfilePageState extends State<ProfilePage> {
         else if (state is ProfileLoading) {
           return Scaffold(
             appBar: AppBar(
-              title: Text(currentUser?.email ?? 'Profile'),
+              title: Text(currentUser?.name ?? 'Profile'),
               centerTitle: true,
             ),
-            body: const Center(child: CircularProgressIndicator()),
+            body: const Center(childr: CircularProgressIndicator()),
           );
         } else {
           // initial / error
