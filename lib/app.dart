@@ -1,12 +1,13 @@
-//Run App
+// Run App
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/auth/data/firebase_auth_repo.dart';
-
 import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_states.dart';
 import 'package:loom/features/auth/presentation/pages/auth_page.dart';
 import 'package:loom/features/home/presentation/pages/home_page.dart';
+import 'package:loom/features/profile/data/firebase_profile_repo.dart';
+import 'package:loom/features/profile/presentation/cubits/profile_cubit.dart';
 import 'package:loom/themes/light_mode.dart';
 
 /* APP -> Root Level
@@ -35,12 +36,26 @@ class MyApp extends StatelessWidget {
   // Auth Repo
   final authRepo = FirebaseAuthRepo();
 
+  // Profile Repo
+  final profileRepo = FirebaseProfileRepo();
+
   MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => AuthCubit(authRepo: authRepo)..checkAuthentication(),
+    return MultiBlocProvider(
+      providers: [
+        // auth cubits
+        BlocProvider<AuthCubit>(
+          create: (context) =>
+              AuthCubit(authRepo: authRepo)..checkAuthentication(),
+        ),
+
+        // Profile Cubit
+        BlocProvider<ProfileCubit>(
+          create: (context) => ProfileCubit(profileRepo: profileRepo),
+        ),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: lightMode,

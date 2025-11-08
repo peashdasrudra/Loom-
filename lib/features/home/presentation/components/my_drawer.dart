@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
 import 'package:loom/features/home/presentation/components/my_drawer_tile.dart';
+import 'package:loom/features/profile/presentation/pages/profile_page.dart';
 
 class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
@@ -18,6 +21,7 @@ class MyDrawer extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 50.0),
                 child: Image.asset('assets/images/logo.jpg', height: 80),
               ),
+
               // Divide line
               Divider(
                 color: Theme.of(context).colorScheme.primary,
@@ -35,14 +39,31 @@ class MyDrawer extends StatelessWidget {
               MyDrawerTile(
                 title: 'P O F I L E',
                 icon: Icons.person,
-                onTap: () {},
+                onTap: () {
+                  // pop menu drawer
+                  Navigator.of(context).pop();
+
+                  // get current user uid
+                  final user = context.read<AuthCubit>().currentUser;
+                  String uid = user!.uid;
+
+                  // navigate to profile page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfilePage(uid: uid),
+                    ),
+                  );
+                },
               ),
+
               // search tile
               MyDrawerTile(
                 title: 'S E A R C H',
                 icon: Icons.search,
                 onTap: () {},
               ),
+
               // settings tile
               MyDrawerTile(
                 title: 'S E T T I N G S',
@@ -59,7 +80,9 @@ class MyDrawer extends StatelessWidget {
               MyDrawerTile(
                 title: 'L O G O U T',
                 icon: Icons.logout,
-                onTap: () {},
+                onTap: () {
+                  context.read<AuthCubit>().logout();
+                },
               ),
             ],
           ),
