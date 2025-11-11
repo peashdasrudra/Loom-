@@ -49,87 +49,109 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // ensure Scaffold resizes when keyboard appears
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // logo
-                Image.asset('assets/images/Logo_Lockup.jpg', height: 80),
-
-                const SizedBox(height: 50),
-
-                Center(
-                  child: Lottie.network(
-                    'https://lottie.host/a5abeac1-fdc0-4a31-a418-688f47094b96/wzepsMUj7x.json',
-                    height: 150,
-                    width: 150,
-                  ),
-                ),
-
-                const SizedBox(height: 50),
-
-                // welcome back msg
-                Text(
-                  "Welcome back, you've been missed!",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
-                // email textfield
-                MyTextField(
-                  controller: emailController,
-                  hintText: "Email",
-                  obscureText: false,
-                ),
-
-                const SizedBox(height: 15),
-
-                // password textfield
-                MyTextField(
-                  controller: pwController,
-                  hintText: "Password",
-                  obscureText: true,
-                ),
-
-                const SizedBox(height: 30),
-
-                // login button
-                MyButton(onTap: login, text: "Login"),
-
-                const SizedBox(height: 20),
-
-                // not a member? register now
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Not a member? ",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: widget.togglePages,
-                      child: Text(
-                        "Register now",
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
+        // Use LayoutBuilder so we can constrain minHeight to viewport height
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              // make room for keyboard so bottom content moves above it
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                    child: Column(
+                      // keep the vertical centering when keyboard is closed
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // logo
+                        Image.asset(
+                          'assets/images/Logo_Lockup.jpg',
+                          height: 80,
                         ),
-                      ),
+
+                        const SizedBox(height: 50),
+
+                        Center(
+                          child: Lottie.network(
+                            'https://lottie.host/a5abeac1-fdc0-4a31-a418-688f47094b96/wzepsMUj7x.json',
+                            height: 150,
+                            width: 150,
+                          ),
+                        ),
+
+                        const SizedBox(height: 50),
+
+                        // welcome back msg
+                        Text(
+                          "Welcome back, you've been missed!",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+
+                        const SizedBox(height: 25),
+
+                        // email textfield
+                        MyTextField(
+                          controller: emailController,
+                          hintText: "Email",
+                          obscureText: false,
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        // password textfield
+                        MyTextField(
+                          controller: pwController,
+                          hintText: "Password",
+                          obscureText: true,
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        // login button
+                        MyButton(onTap: login, text: "Login"),
+
+                        const SizedBox(height: 20),
+
+                        // not a member? register now
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Not a member? ",
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: widget.togglePages,
+                              child: Text(
+                                "Register now",
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // optional spacer to ensure bottom spacing when fully expanded
+                        const SizedBox(height: 8),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

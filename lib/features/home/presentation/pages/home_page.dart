@@ -17,9 +17,13 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       // App Bar
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Home",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),

@@ -8,6 +8,7 @@ import 'package:loom/features/auth/presentation/pages/auth_page.dart';
 import 'package:loom/features/home/presentation/pages/home_page.dart';
 import 'package:loom/features/profile/data/firebase_profile_repo.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_cubit.dart';
+import 'package:loom/features/storage/data/firebase_storage_repo.dart';
 import 'package:loom/themes/light_mode.dart';
 
 /* APP -> Root Level
@@ -34,10 +35,13 @@ Check Auth State:
 
 class MyApp extends StatelessWidget {
   // Auth Repo
-  final authRepo = FirebaseAuthRepo();
+  final firebaseAuthRepo = FirebaseAuthRepo();
 
   // Profile Repo
-  final profileRepo = FirebaseProfileRepo();
+  final firebaseProfileRepo = FirebaseProfileRepo();
+
+  //storage Repo
+  final firebaseStorageRepo = FirebaseStorageRepo();
 
   MyApp({super.key});
 
@@ -48,12 +52,15 @@ class MyApp extends StatelessWidget {
         // auth cubits
         BlocProvider<AuthCubit>(
           create: (context) =>
-              AuthCubit(authRepo: authRepo)..checkAuthentication(),
+              AuthCubit(authRepo: firebaseAuthRepo)..checkAuthentication(),
         ),
 
         // Profile Cubit
         BlocProvider<ProfileCubit>(
-          create: (context) => ProfileCubit(profileRepo: profileRepo),
+          create: (context) => ProfileCubit(
+            profileRepo: firebaseProfileRepo,
+            storageRepo: firebaseStorageRepo,
+          ),
         ),
       ],
       child: MaterialApp(

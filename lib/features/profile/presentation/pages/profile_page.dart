@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/auth/domain/entities/app_user.dart';
@@ -56,7 +57,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       builder: (context) => EditProfilePage(user: user),
                     ),
                   ),
-                  icon: Icon(Icons.edit),
+                  icon: Icon(Icons.settings),
                 ),
               ],
             ),
@@ -73,36 +74,32 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 const SizedBox(height: 25),
-                // profile picture
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  height: 120,
-                  width: 120,
-                  padding: const EdgeInsets.all(25),
-                  child: Icon(
+                CachedNetworkImage(
+                  imageUrl: user.profileImageUrl,
+                  // loading..
+                  placeholder: (context, url) =>
+                      const CircularProgressIndicator(),
+
+                  // error -> failed to load
+                  errorWidget: (context, url, error) => Icon(
                     Icons.person,
+                    size: 72,
                     color: Theme.of(context).colorScheme.primary,
-                    size: 70,
                   ),
-                ),
-                const SizedBox(height: 25),
-                // bio box
-                Padding(
-                  padding: const EdgeInsets.only(left: 25.0),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Bio:',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                  // Icon
+                  // loaded
+                  imageBuilder: (context, imageProvider) => Container(
+                    height: 120,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      image: DecorationImage(
+                        image: imageProvider,
+                        fit: BoxFit.cover,
                       ),
-                    ],
-                  ),
-                ),
+                    ), // BoxDecoration
+                  ), // Container
+                ), // CachedNetworkImage
 
                 const SizedBox(height: 25),
 
@@ -133,13 +130,13 @@ class _ProfilePageState extends State<ProfilePage> {
               title: Text(currentUser?.name ?? 'Profile'),
               centerTitle: true,
             ),
-            body: const Center(childr: CircularProgressIndicator()),
+            body: const Center(child: CircularProgressIndicator()),
           );
         } else {
           // initial / error
           return Scaffold(
             appBar: AppBar(
-              title: Text(currentUser?.email ?? 'Profile'),
+              title: Text(currentUser?.name ?? 'Profile'),
               centerTitle: true,
             ),
             body: const Center(child: Text('Unable to load profile')),

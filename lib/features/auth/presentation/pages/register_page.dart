@@ -65,106 +65,120 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // ensure Scaffold resizes when keyboard appears
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // logo
-                Image.asset('assets/images/Logo_Lockup.jpg', height: 80),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding:
+                  EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // logo
+                        Image.asset('assets/images/Logo_Lockup.jpg', height: 80),
 
-                const SizedBox(height: 50),
+                        const SizedBox(height: 50),
 
-                Center(
-                  child: Lottie.network(
-                    'https://lottie.host/a5abeac1-fdc0-4a31-a418-688f47094b96/wzepsMUj7x.json',
-                    height: 120,
-                    width: 150,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // create account msg
-                Text(
-                  "Let's create an account for you!",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
-                // email textfield
-                MyTextField(
-                  controller: nameController,
-                  hintText: "Name",
-                  obscureText: false,
-                ),
-
-                const SizedBox(height: 15),
-
-                // email textfield
-                MyTextField(
-                  controller: emailController,
-                  hintText: "Email",
-                  obscureText: false,
-                ),
-
-                const SizedBox(height: 15),
-
-                // password textfield
-                MyTextField(
-                  controller: pwController,
-                  hintText: "Password",
-                  obscureText: true,
-                ),
-
-                const SizedBox(height: 15),
-
-                // password textfield
-                MyTextField(
-                  controller: confirmPwController,
-                  hintText: "Confirm Password",
-                  obscureText: true,
-                ),
-
-                const SizedBox(height: 30),
-
-                // login button (example placeholder)
-                MyButton(onTap: register, text: "Register"),
-
-                const SizedBox(height: 20),
-
-                // alr a member? login now
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Already a member? ",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-
-                    GestureDetector(
-                      onTap: widget.togglePages,
-                      child: Text(
-                        "Login now",
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
+                        Center(
+                          child: Lottie.network(
+                            'https://lottie.host/a5abeac1-fdc0-4a31-a418-688f47094b96/wzepsMUj7x.json',
+                            height: 120,
+                            width: 150,
+                          ),
                         ),
-                      ),
+
+                        const SizedBox(height: 20),
+
+                        // create account msg
+                        Text(
+                          "Let's create an account for you!",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+
+                        const SizedBox(height: 25),
+
+                        // name textfield
+                        MyTextField(
+                          controller: nameController,
+                          hintText: "Name",
+                          obscureText: false,
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        // email textfield
+                        MyTextField(
+                          controller: emailController,
+                          hintText: "Email",
+                          obscureText: false,
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        // password textfield
+                        MyTextField(
+                          controller: pwController,
+                          hintText: "Password",
+                          obscureText: true,
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        // confirm password textfield
+                        MyTextField(
+                          controller: confirmPwController,
+                          hintText: "Confirm Password",
+                          obscureText: true,
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        // register button
+                        MyButton(onTap: register, text: "Register"),
+
+                        const SizedBox(height: 20),
+
+                        // alr a member? login now
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Already a member? ",
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+
+                            GestureDetector(
+                              onTap: widget.togglePages,
+                              child: Text(
+                                "Login now",
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
