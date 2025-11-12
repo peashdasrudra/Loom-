@@ -71,8 +71,9 @@ class _RegisterPageState extends State<RegisterPage> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              padding:
-                  EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
@@ -82,7 +83,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         // logo
-                        Image.asset('assets/images/Logo_Lockup.jpg', height: 80),
+                        Image.asset('assets/images/app_banner.png', height: 80),
 
                         const SizedBox(height: 50),
 

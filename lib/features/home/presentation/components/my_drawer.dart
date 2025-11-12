@@ -19,7 +19,7 @@ class MyDrawer extends StatelessWidget {
               // logo
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 50.0),
-                child: Image.asset('assets/images/logo.jpg', height: 80),
+                child: Image.asset('assets/images/app_logo.png', height: 80),
               ),
 
               // Divide line

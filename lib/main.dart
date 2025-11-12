@@ -6,7 +6,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/auth/data/firebase_auth_repo.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
-// alias the app's auth states to avoid name clash with Supabase's AuthState
 import 'package:loom/features/auth/presentation/cubits/auth_states.dart'
     as app_auth;
 import 'package:loom/features/auth/presentation/pages/auth_page.dart';
