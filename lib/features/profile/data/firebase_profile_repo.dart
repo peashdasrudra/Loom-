@@ -26,7 +26,6 @@ class FirebaseProfileRepo implements ProfileRepo {
           );
         }
       }
-
       return null;
     } catch (e) {
       return null;
@@ -36,7 +35,6 @@ class FirebaseProfileRepo implements ProfileRepo {
   @override
   Future<void> updateProfile(ProfileUser updatedProfile) async {
     try {
-      // convert profile user to json to store in firebase
       await firebaseFirestore
           .collection('users')
           .doc(updatedProfile.uid)

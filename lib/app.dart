@@ -8,7 +8,7 @@ import 'package:loom/features/auth/presentation/pages/auth_page.dart';
 import 'package:loom/features/home/presentation/pages/home_page.dart';
 import 'package:loom/features/profile/data/firebase_profile_repo.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_cubit.dart';
-import 'package:loom/features/storage/data/firebase_storage_repo.dart';
+import 'package:loom/features/storage/data/supabase_storage_repo.dart';
 import 'package:loom/themes/light_mode.dart';
 
 /* APP -> Root Level
@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
   final firebaseProfileRepo = FirebaseProfileRepo();
 
   //storage Repo
-  final firebaseStorageRepo = FirebaseStorageRepo();
+  final supabaseStorageRepo = SupabaseStorageRepo();
 
   MyApp({super.key});
 
@@ -59,7 +59,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<ProfileCubit>(
           create: (context) => ProfileCubit(
             profileRepo: firebaseProfileRepo,
-            storageRepo: firebaseStorageRepo,
+            storageRepo: supabaseStorageRepo,
           ),
         ),
       ],

@@ -1,7 +1,6 @@
-// H:/Loom/lib/features/profile/presentation/cubits/profile_cubit.dart
+// lib/features/profile/presentation/cubits/profile_cubit.dart
 
 import 'dart:typed_data';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/profile/domain/repos/profile_repo.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_states.dart';
@@ -12,7 +11,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   final StorageRepo storageRepo;
 
   ProfileCubit({required this.profileRepo, required this.storageRepo})
-    : super(ProfileInitial());
+      : super(ProfileInitial());
 
   // Fetch Profile User Data
   Future<void> fetchProfileUser(String uid) async {
@@ -20,7 +19,6 @@ class ProfileCubit extends Cubit<ProfileState> {
     try {
       final user = await profileRepo.getProfileUser(uid);
       if (user != null) {
-        // Correctly passing 'user' as a positional argument.
         emit(ProfileLoaded(user));
       } else {
         emit(ProfileError('User not found'));
@@ -37,53 +35,60 @@ class ProfileCubit extends Cubit<ProfileState> {
     Uint8List? imageWebBytes,
     String? imageMobilePath,
   }) async {
+    print('ProfileCubit: updateProfile called for uid=$uid');
     emit(ProfileLoading());
     try {
-      // Get current profile user
       final currentUser = await profileRepo.getProfileUser(uid);
+      print('ProfileCubit: currentUser fetched -> $currentUser');
 
       if (currentUser == null) {
         emit(ProfileError('Failed to fetch current user data'));
         return;
       }
 
-      // profile picture update
       String? imageDownloadUrl;
 
-      // ensure there is an image
+      // upload image if present
       if (imageWebBytes != null || imageMobilePath != null) {
-        // for mobile
+        print('ProfileCubit: uploading image...');
         if (imageMobilePath != null) {
-          // upload
           imageDownloadUrl = await storageRepo.uploadProfileImageMobile(
             imageMobilePath,
             uid,
           );
-        }
-        // for web
-        else if (imageWebBytes != null) {
+        } else if (imageWebBytes != null) {
           imageDownloadUrl = await storageRepo.uploadProfileImageMWeb(
             imageWebBytes,
             uid,
           );
         }
+        print('ProfileCubit: image upload returned -> $imageDownloadUrl');
         if (imageDownloadUrl == null) {
           emit(ProfileError("Failed to upload image"));
           return;
         }
       }
-      // Update new profile details
+
       final updatedProfile = currentUser.copyWith(
         newBio: newBio ?? currentUser.bio,
         newProfileImageUrl: imageDownloadUrl ?? currentUser.profileImageUrl,
       );
 
-      // Save updated profile to repository
+      print('ProfileCubit: updating profile in repo -> $updatedProfile');
+
       await profileRepo.updateProfile(updatedProfile);
 
-      // Correctly passing 'updatedProfile' as a positional argument.
-      await fetchProfileUser(uid);
-    } catch (e) {
+      // Emit updated profile immediately so EditProfilePage can pop.
+      emit(ProfileLoaded(updatedProfile));
+
+      // Attempt to refresh from server asynchronously (optional).
+      try {
+        await fetchProfileUser(uid);
+      } catch (e) {
+        print('ProfileCubit: fetchProfileUser after update failed: $e');
+      }
+    } catch (e, st) {
+      print('ProfileCubit: Error Updating Profile: $e\n$st');
       emit(ProfileError('Error Updating Profile: $e'));
     }
   }

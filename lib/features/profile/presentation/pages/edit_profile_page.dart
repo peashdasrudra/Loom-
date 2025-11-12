@@ -1,3 +1,5 @@
+// lib/features/profile/presentation/pages/edit_profile_page.dart
+
 import 'dart:io' show File;
 import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -43,11 +45,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
           webImage = imagePickedFile!.bytes;
         }
       });
+      // debug
+      print(
+        'pickImage: selected file: ${imagePickedFile?.name}, path: ${imagePickedFile?.path}, bytesLength: ${imagePickedFile?.bytes?.length}',
+      );
+    } else {
+      print('pickImage: no file selected');
     }
   } // <-- closed pickImage()
 
   // update profile button pressed
-  void updateProfile() async {
+  Future<void> updateProfile() async {
+    print('EditProfilePage.updateProfile called');
     // profile cubit
     final profileCubit = context.read<ProfileCubit>();
 
@@ -59,14 +68,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final imageMobilePath = kIsWeb ? null : imagePickedFile?.path;
     final imageWebBytes = kIsWeb ? imagePickedFile?.bytes : null;
 
+    print(
+      'EditProfilePage: uid=$uid newBio=$newBio imageMobilePath=$imageMobilePath bytesLength=${imageWebBytes?.length}',
+    );
+
     // only update profile if there is something to update
     if (imagePickedFile != null || newBio != null) {
-      profileCubit.updateProfile(
+      await profileCubit.updateProfile(
         uid: uid,
         newBio: newBio,
         imageMobilePath: imageMobilePath,
         imageWebBytes: imageWebBytes,
       );
+      // don't Navigator.pop here — let the cubit's listener decide
     } else {
       // nothing to update → go to previous page
       Navigator.pop(context);
@@ -85,11 +99,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+                children: const [
                   CircularProgressIndicator(),
-
-                  const SizedBox(height: 20),
-
+                  SizedBox(height: 20),
                   Text('Updating...'),
                 ],
               ),
@@ -102,7 +114,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
       },
       listener: (context, state) {
         if (state is ProfileLoaded) {
+          // show success and pop back to profile
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Profile updated')));
           Navigator.pop(context);
+        } else if (state is ProfileError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Update failed: ${state.message}')),
+          );
         }
       },
     );
@@ -111,79 +131,108 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget buildEditPage() {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Edit Profile"),
+        title: const Text("Edit Profile"),
         foregroundColor: Theme.of(context).colorScheme.primary,
         centerTitle: true,
         actions: [
           // save button
-          IconButton(onPressed: updateProfile, icon: Icon(Icons.upload)),
+          IconButton(onPressed: updateProfile, icon: const Icon(Icons.upload)),
         ],
       ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
 
-      body: Column(
-        children: [
-          // profile picture
-          Center(
-            child: Container(
-              height: 200,
-              width: 200,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondary,
-                shape: BoxShape.circle,
-              ),
-              clipBehavior: Clip.hardEdge,
-              // BoxDecoration
-              child:
-                  // display selected image for mobile
-                  (!kIsWeb && imagePickedFile != null)
-                  ? Image.file(File(imagePickedFile!.path!), fit: BoxFit.cover)
-                  // display selected image for web
-                  : (kIsWeb && webImage != null)
-                  ? Image.memory(webImage!, fit: BoxFit.cover)
-                  :
-                    // no image selected -> display existing profile pic
-                    CachedNetworkImage(
-                      imageUrl: widget.user.profileImageUrl,
-                      // loading..
-                      placeholder: (context, url) =>
-                          const CircularProgressIndicator(),
-
-                      // error -> failed to load
-                      errorWidget: (context, url, error) => Icon(
-                        Icons.person,
-                        size: 72,
-                        color: Theme.of(context).colorScheme.primary,
+            // profile picture + tappable + edit icon
+            Center(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Hero-wrapped tappable circular image
+                  GestureDetector(
+                    onTap: pickImage, // tap image to pick
+                    child: Hero(
+                      tag: 'profile_image_${widget.user.uid}',
+                      child: Container(
+                        height: 200,
+                        width: 200,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.secondary,
+                          shape: BoxShape.circle,
+                        ),
+                        clipBehavior: Clip.hardEdge,
+                        child: (!kIsWeb && imagePickedFile != null)
+                            ? Image.file(
+                                File(imagePickedFile!.path!),
+                                fit: BoxFit.cover,
+                              )
+                            : (kIsWeb && webImage != null)
+                            ? Image.memory(webImage!, fit: BoxFit.cover)
+                            : CachedNetworkImage(
+                                imageUrl:
+                                    "${widget.user.profileImageUrl}?v=${DateTime.now().millisecondsSinceEpoch}",
+                                // loading..
+                                placeholder: (context, url) =>
+                                    const CircularProgressIndicator(),
+                                // error -> failed to load
+                                errorWidget: (context, url, error) => Icon(
+                                  Icons.person,
+                                  size: 72,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                imageBuilder: (context, imageProvider) => Image(
+                                  image: imageProvider,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
                       ),
-                      // Icon
-                      // loaded
-                      imageBuilder: (context, imageProvider) =>
-                          Image(image: imageProvider, fit: BoxFit.cover),
                     ),
-            ), // ContainerS
-          ), // Center
-          // pick image button
-          Center(
-            child: MaterialButton(
-              onPressed: pickImage,
-              color: Colors.blue,
-              child: Text("Pick Image"),
+                  ),
+
+                  // bottom-right camera overlay (transparent)
+                  Positioned(
+                    right: -6,
+                    bottom: -6,
+                    child: Material(
+                      color: Colors.black.withOpacity(0.45),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        padding: const EdgeInsets.all(8),
+                        iconSize: 18,
+                        onPressed: pickImage,
+                        icon: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // bio
-          Text("Bio"),
+            const SizedBox(height: 12),
 
-          const SizedBox(height: 10),
+            const SizedBox(height: 10),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25.0),
-            child: MyTextField(
-              controller: bioTextController,
-              hintText: widget.user.bio,
-              obscureText: false,
+            // bio label
+            const Text("Bio"),
+
+            const SizedBox(height: 10),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25.0),
+              child: MyTextField(
+                controller: bioTextController,
+                hintText: widget.user.bio,
+                obscureText: false,
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }
