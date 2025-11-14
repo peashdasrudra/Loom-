@@ -2,75 +2,117 @@
 
 import 'dart:io' show File;
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:path/path.dart' as p;
 import 'package:loom/features/storage/domain/storage_repo.dart';
 
 class SupabaseStorageRepo implements StorageRepo {
-  // get the initialized Supabase client
   final _client = Supabase.instance.client;
 
-  // bucket name (must exist in Supabase dashboard)
-  final String _bucket = 'profile_images';
+  // Bucket names (create these in Supabase dashboard -> Storage)
+  final String _profileBucket = 'profile_images';
+  final String _postBucket = 'post_media';
 
+  // ---------------- Profile (mobile) ----------------
   @override
   Future<String?> uploadProfileImageMobile(String path, String fileName) async {
     try {
       final file = File(path);
-      final filePath = fileName;
+      final ext = p.extension(path);
+      final filePath = ext.isNotEmpty ? '$fileName$ext' : fileName;
 
-      print(
-        'SupabaseStorageRepo.uploadProfileImageMobile -> filePath: $filePath, path: $path',
-      );
-
-      // upload file from device storage (mobile)
+      // upload
       await _client.storage
-          .from(_bucket)
+          .from(_profileBucket)
           .upload(filePath, file, fileOptions: const FileOptions(upsert: true));
 
-      // get public URL (if bucket is public)
-      final publicUrl = _client.storage.from(_bucket).getPublicUrl(filePath);
-      print(
-        'SupabaseStorageRepo.uploadProfileImageMobile -> uploaded url: $publicUrl',
-      );
-
+      // return public url (works if bucket is public)
+      final publicUrl = _client.storage
+          .from(_profileBucket)
+          .getPublicUrl(filePath);
+      print('Supabase: uploaded profile mobile -> $publicUrl');
       return publicUrl;
     } catch (e, st) {
-      print('Error uploading mobile image: $e\n$st');
+      print('Supabase uploadProfileImageMobile error: $e\n$st');
       return null;
     }
   }
 
+  // ---------------- Profile (web) ----------------
   @override
-  Future<String?> uploadProfileImageMWeb(
+  Future<String?> uploadProfileImageWeb(
     Uint8List fileBytes,
     String fileName,
   ) async {
     try {
-      final filePath = fileName;
+      final filePath = fileName.contains('.') ? fileName : '$fileName.png';
 
-      print(
-        'SupabaseStorageRepo.uploadProfileImageMWeb -> filePath: $filePath, bytesLength: ${fileBytes.length}',
-      );
-
-      // On web, uploadBinary accepts bytes. Don't try to cast to File.
       await _client.storage
-          .from(_bucket)
+          .from(_profileBucket)
           .uploadBinary(
             filePath,
             fileBytes,
             fileOptions: const FileOptions(upsert: true),
           );
 
-      // get public URL (if bucket is public)
-      final publicUrl = _client.storage.from(_bucket).getPublicUrl(filePath);
-      print(
-        'SupabaseStorageRepo.uploadProfileImageMWeb -> uploaded url: $publicUrl',
-      );
-
+      final publicUrl = _client.storage
+          .from(_profileBucket)
+          .getPublicUrl(filePath);
+      print('Supabase: uploaded profile web -> $publicUrl');
       return publicUrl;
     } catch (e, st) {
-      print('Error uploading web image: $e\n$st');
+      print('Supabase uploadProfileImageMWeb error: $e\n$st');
+      return null;
+    }
+  }
+
+  // ---------------- Post image (mobile) ----------------
+  @override
+  Future<String?> uploadPostImageMobile(String path, String fileName) async {
+    try {
+      final file = File(path);
+      final ext = p.extension(path);
+      final filePath = ext.isNotEmpty ? '$fileName$ext' : fileName;
+
+      await _client.storage
+          .from(_postBucket)
+          .upload(filePath, file, fileOptions: const FileOptions(upsert: true));
+
+      final publicUrl = _client.storage
+          .from(_postBucket)
+          .getPublicUrl(filePath);
+      print('Supabase: uploaded post mobile -> $publicUrl');
+      return publicUrl;
+    } catch (e, st) {
+      print('Supabase uploadPostImageMobile error: $e\n$st');
+      return null;
+    }
+  }
+
+  // ---------------- Post image (web) ----------------
+  @override
+  Future<String?> uploadPostImageWeb(
+    Uint8List fileBytes,
+    String fileName,
+  ) async {
+    try {
+      final filePath = fileName.contains('.') ? fileName : '$fileName.png';
+
+      await _client.storage
+          .from(_postBucket)
+          .uploadBinary(
+            filePath,
+            fileBytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
+
+      final publicUrl = _client.storage
+          .from(_postBucket)
+          .getPublicUrl(filePath);
+      print('Supabase: uploaded post web -> $publicUrl');
+      return publicUrl;
+    } catch (e, st) {
+      print('Supabase uploadPostImageWeb error: $e\n$st');
       return null;
     }
   }

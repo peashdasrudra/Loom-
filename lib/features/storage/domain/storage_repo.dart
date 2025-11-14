@@ -5,5 +5,11 @@ abstract class StorageRepo {
   Future<String?> uploadProfileImageMobile(String path, String fileName);
 
   // upload profile images on web platforms
-  Future<String?> uploadProfileImageMWeb(Uint8List fileBytes, String fileName);
+  Future<String?> uploadProfileImageWeb(Uint8List fileBytes, String fileName);
+
+  // upload post image for mobile (path) — called by your PostCubit
+  Future<String?> uploadPostImageMobile(String path, String fileName);
+
+  // upload post image for web (bytes) — called by your PostCubit
+  Future<String?> uploadPostImageWeb(Uint8List fileBytes, String fileName);
 }

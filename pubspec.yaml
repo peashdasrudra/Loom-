@@ -22,6 +22,7 @@ dependencies:
   file_picker: ^10.3.6
   cached_network_image: ^3.4.1
   flutter_native_splash: ^2.4.7
+  path: ^1.8.3
 
 dev_dependencies:
   flutter_test:
@@ -35,6 +36,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/icons/
 
 # flutter_launcher_icons config (adaptive icon with a solid background)
 flutter_launcher_icons:

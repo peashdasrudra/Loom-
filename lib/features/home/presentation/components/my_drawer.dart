@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
 import 'package:loom/features/home/presentation/components/my_drawer_tile.dart';
+import 'package:loom/features/home/presentation/pages/about_page.dart';
 import 'package:loom/features/profile/presentation/pages/profile_page.dart';
 
 class MyDrawer extends StatelessWidget {
@@ -72,7 +73,20 @@ class MyDrawer extends StatelessWidget {
               ),
 
               // about tile
-               MyDrawerTile(title: 'A B O U T', icon: Icons.info, onTap: () {}),
+              MyDrawerTile(
+                title: 'A B O U T',
+                icon: Icons.info,
+                onTap: () {
+                  // pop menu drawer
+                  Navigator.of(context).pop();
+
+                  // navigate to profile page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AboutPage()),
+                  );
+                },
+              ),
               const Spacer(),
 
               // logout tile

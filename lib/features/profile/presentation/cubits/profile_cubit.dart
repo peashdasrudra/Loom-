@@ -2,6 +2,7 @@
 
 import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:loom/features/profile/domain/entities/profile_user.dart';
 import 'package:loom/features/profile/domain/repos/profile_repo.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_states.dart';
 import 'package:loom/features/storage/domain/storage_repo.dart';
@@ -11,9 +12,9 @@ class ProfileCubit extends Cubit<ProfileState> {
   final StorageRepo storageRepo;
 
   ProfileCubit({required this.profileRepo, required this.storageRepo})
-      : super(ProfileInitial());
+    : super(ProfileInitial());
 
-  // Fetch Profile User Data
+  // Fetch Profile User Data using repo -> useful for landing profile pages
   Future<void> fetchProfileUser(String uid) async {
     emit(ProfileLoading());
     try {
@@ -26,6 +27,12 @@ class ProfileCubit extends Cubit<ProfileState> {
     } catch (e) {
       emit(ProfileError(e.toString()));
     }
+  }
+
+  // return user Profile given uid => useful for loadingm+ many profiles for post
+  Future<ProfileUser?> getUserProfile(String uid) async {
+    final user = await profileRepo.getProfileUser(uid);
+    return user;
   }
 
   // Update Profile User Data
@@ -57,7 +64,7 @@ class ProfileCubit extends Cubit<ProfileState> {
             uid,
           );
         } else if (imageWebBytes != null) {
-          imageDownloadUrl = await storageRepo.uploadProfileImageMWeb(
+          imageDownloadUrl = await storageRepo.uploadProfileImageWeb(
             imageWebBytes,
             uid,
           );

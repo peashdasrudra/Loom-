@@ -131,7 +131,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget buildEditPage() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Edit Profile"),
+        title: const Text(
+          "Edit Profile",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         foregroundColor: Theme.of(context).colorScheme.primary,
         centerTitle: true,
         actions: [
