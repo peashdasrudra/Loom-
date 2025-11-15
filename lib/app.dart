@@ -7,17 +7,30 @@ import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_states.dart'
     as app_auth;
 import 'package:loom/features/auth/presentation/pages/auth_page.dart';
+import 'package:loom/features/home/presentation/components/main_shell.dart';
+import 'package:loom/features/home/presentation/components/my_drawer.dart';
+
 import 'package:loom/features/home/presentation/pages/home_page.dart';
+import 'package:loom/features/post/presentation/pages/upload_post_page.dart';
+import 'package:loom/features/profile/presentation/pages/profile_page.dart';
+
 import 'package:loom/features/post/data/firebase_post_repo.dart';
 import 'package:loom/features/post/presentation/cubits/post_cubit.dart';
+
 import 'package:loom/features/profile/data/firebase_profile_repo.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_cubit.dart';
+
 import 'package:loom/features/storage/data/supabase_storage_repo.dart';
+
 import 'package:loom/themes/light_mode.dart';
 
-/// App: Root-level widget that wires repositories, cubits and the top-level MaterialApp.
+///
+/// App: Root widget that wires repositories, cubits and MaterialApp.
+///
 class App extends StatelessWidget {
-  // Repositories (kept as instance fields for easy testing/override later)
+  // ──────────────────────────────────────────────────────────────────────────
+  // Repositories (kept as instance fields for easy unit testing / override)
+  // ──────────────────────────────────────────────────────────────────────────
   final FirebaseAuthRepo firebaseAuthRepo = FirebaseAuthRepo();
   final FirebaseProfileRepo firebaseProfileRepo = FirebaseProfileRepo();
   final SupabaseStorageRepo supabaseStorageRepo = SupabaseStorageRepo();
@@ -29,13 +42,13 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // Auth cubit: checks authentication on creation
+        // Auth Cubit → Handles login state, refreshes, token checks, etc.
         BlocProvider<AuthCubit>(
           create: (context) =>
               AuthCubit(authRepo: firebaseAuthRepo)..checkAuthentication(),
         ),
 
-        // Profile cubit (depends on profile & storage repos)
+        // Profile Cubit → Profile details + picture uploads
         BlocProvider<ProfileCubit>(
           create: (context) => ProfileCubit(
             profileRepo: firebaseProfileRepo,
@@ -43,7 +56,7 @@ class App extends StatelessWidget {
           ),
         ),
 
-        // Post cubit
+        // Post Cubit → Creating, uploading, deleting, fetching posts
         BlocProvider<PostCubit>(
           create: (context) => PostCubit(
             postRepo: firebasePostRepo,
@@ -51,25 +64,51 @@ class App extends StatelessWidget {
           ),
         ),
       ],
+
+      // ──────────────────────────────────────────────────────────────────────
+      // Main MaterialApp
+      // ──────────────────────────────────────────────────────────────────────
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: lightMode,
+
+        // Auth state decides whether to show Login or Main App UI
         home: BlocConsumer<AuthCubit, app_auth.AuthState>(
           builder: (context, authState) {
-            // Unauthenticated -> show AuthPage
+            // ────────────────────────────────────────────────────────────────
+            // NOT LOGGED IN → Go to Auth Page
+            // ────────────────────────────────────────────────────────────────
             if (authState is app_auth.Unauthenticated) {
               return AuthPage();
             }
-            // Authenticated -> show HomePage
+            // ────────────────────────────────────────────────────────────────
+            // LOGGED IN → Load MainShell with animated bottom navigation
+            // ────────────────────────────────────────────────────────────────
             else if (authState is app_auth.Authenticated) {
-              return HomePage();
+              // use the logged-in user's id for the profile page route
+              final userId = context.read<AuthCubit>().currentUser!.uid;
+
+              return MainShell(
+                pages: [
+                  const HomePage(), // Bottom nav index 0 -> Home
+                  const UploadPostPage(), // Bottom nav index 1 -> Create
+                  ProfilePage(uid: userId), // Bottom nav index 2 -> Profile
+                ],
+                // Pass your app drawer into the shell so the shell can detect
+                // when the drawer opens and hide the bottom nav accordingly.
+                drawer: const MyDrawer(),
+              );
             }
 
-            // Loading / unknown -> show progress
+            // ────────────────────────────────────────────────────────────────
+            // UNKNOWN / LOADING → Progress Indicator
+            // ────────────────────────────────────────────────────────────────
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           },
+
+          // Show errors from Auth Cubit as snackbars
           listener: (context, state) {
             if (state is app_auth.AuthError) {
               ScaffoldMessenger.of(
