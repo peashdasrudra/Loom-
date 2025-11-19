@@ -1,7 +1,9 @@
 // lib/features/core/main_shell.dart
-// Improved MainShell: centered, responsive glass nav, drawer/keyboard aware,
-// exposes navBaseHeight for pages to reserve bottom space.
-// NAV BAR MADE SHORTER: navBaseHeight = 90.0 and visual sizes/paddings reduced.
+// Professional, minimal, deploy-ready MainShell
+// - Subtle frosted glass bottom nav
+// - Responsive, centered, narrow max width
+// - Minimal animations: nav show/hide + small active/pulse animations
+// - Easy-to-tune constants at top
 
 import 'dart:ui';
 import 'dart:math' as math;
@@ -14,11 +16,11 @@ class MainShell extends StatefulWidget {
 
   const MainShell({super.key, required this.pages, this.drawer});
 
-  // Base nav height used by pages to reserve padding (avoid overlap).
-  // Reduced so the nav appears more compact on-screen.
+  /// Pages can reserve this much bottom padding to avoid overlap with the nav.
+  /// Set to ~90 for a compact nav (change if you alter sizes below).
   static const double navBaseHeight = 90.0;
 
-  // global scaffold key so pages can open the drawer reliably:
+  /// Global scaffold key so pages can open the drawer reliably.
   static final GlobalKey<ScaffoldState> scaffoldKey =
       GlobalKey<ScaffoldState>();
 
@@ -27,43 +29,55 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
-  int _index = 0;
+  // ----- Configuration constants (tweak these for different looks) -----
+  static const double _navMaxWidth = 520.0;
+  static const double _navScreenFraction = 0.84; // fraction of screen width
+  static const double _navVerticalPadding = 10.0;
+  static const double _blurSigma = 3.0; // subtle glass blur
+  static const double _glowOpacityBase = 0.08;
+  static const double _glowBlurBase = 20.0;
+  static const double _iconContainerSize = 38.0;
+  static const double _iconSize = 20.0;
+  static const double _fabSize = 56.0;
+  static const Duration _navAnimDur = Duration(milliseconds: 300);
+  static const Duration _activeAnimDur = Duration(milliseconds: 260);
+  // --------------------------------------------------------------------
 
-  late final AnimationController _navController;
-  late final AnimationController _activeAnim;
-  late final AnimationController _particleController;
-  late final AnimationController _glowController;
+  int _index = 0;
+  late final AnimationController _navController; // show/hide nav
+  late final AnimationController _activeController; // micro animation on tap
+  late final AnimationController _fabPulseController; // subtle FAB pulse
 
   bool _drawerOpen = false;
 
   @override
   void initState() {
     super.initState();
+
     _navController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 340),
+      duration: _navAnimDur,
       value: 1.0,
     );
-    _activeAnim = AnimationController(
+
+    _activeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
+      duration: _activeAnimDur,
     )..value = 1.0;
-    _particleController = AnimationController(
+
+    _fabPulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    )..repeat();
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1200),
+      lowerBound: 0.0,
+      upperBound: 1.0,
     )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _navController.dispose();
-    _activeAnim.dispose();
-    _particleController.dispose();
-    _glowController.dispose();
+    _activeController.dispose();
+    _fabPulseController.dispose();
     super.dispose();
   }
 
@@ -77,18 +91,20 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
   bool _keyboardOpen(BuildContext context) =>
       MediaQuery.of(context).viewInsets.bottom > 0;
 
-  // update nav visibility when keyboard or drawer changes
   void _updateNavVisibility(BuildContext context) {
     final shouldHide = _drawerOpen || _keyboardOpen(context);
     if (shouldHide) {
       _navController.reverse();
     } else {
       _navController.forward();
-      _activeAnim.forward(from: 0.0).then((_) => _activeAnim.reverse());
+      // play a small active micro-bounce so the bar feels alive after re-appearing
+      _activeController
+          .forward(from: 0.0)
+          .then((_) => _activeController.reverse());
     }
   }
 
-  // pages can call this if they open/close drawer themselves
+  // Called by pages if they open/close the drawer manually.
   void notifyDrawerState(bool open) {
     _drawerOpen = open;
     _updateNavVisibility(context);
@@ -97,17 +113,21 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
   void _setIndex(int idx) {
     if (idx == safeIndex) {
       HapticFeedback.selectionClick();
-      _activeAnim.forward(from: 0.0).then((_) => _activeAnim.reverse());
+      _activeController
+          .forward(from: 0.0)
+          .then((_) => _activeController.reverse());
       return;
     }
     HapticFeedback.lightImpact();
     setState(() => _index = idx);
-    _activeAnim.forward(from: 0.0).then((_) => _activeAnim.reverse());
+    _activeController
+        .forward(from: 0.0)
+        .then((_) => _activeController.reverse());
   }
 
   @override
   Widget build(BuildContext context) {
-    // respond to keyboard changes
+    // react to keyboard changes
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _updateNavVisibility(context),
     );
@@ -115,16 +135,16 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
     return Scaffold(
       key: MainShell.scaffoldKey,
       drawer: widget.drawer,
-      extendBody: true,
+      extendBody: true, // let the nav sit above the scaffold body
       onDrawerChanged: (isOpen) {
         _drawerOpen = isOpen;
         _updateNavVisibility(context);
       },
       body: Stack(
         children: [
-          // pages (AnimatedSwitcher for smooth transitions)
+          // main pages with smooth cross-fade
           AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 260),
             transitionBuilder: (child, anim) =>
                 FadeTransition(opacity: anim, child: child),
             child: KeyedSubtree(
@@ -135,39 +155,29 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
             ),
           ),
 
-          // nav overlay (use AnimatedBuilder on _navController)
+          // Bottom navigation overlay
           AnimatedBuilder(
             animation: _navController,
             builder: (context, _) {
-              final v = _navController.value; // 0..1
-              final bottom = lerpDouble(
-                -140,
-                12,
-                v,
-              )!; // moved slightly up and reduced offset
+              final t = _navController.value; // 0..1
+              final bottom = lerpDouble(-120, 12, t)!; // slide up when visible
               return Positioned(
                 left: 0,
                 right: 0,
                 bottom: bottom,
                 child: Opacity(
-                  opacity: v,
-                  // constrain nav width so it centers predictably on all screen sizes
+                  opacity: t,
                   child: Center(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final maxWidth = constraints.maxWidth;
                         final navWidth = math.min(
-                          maxWidth * 0.92,
-                          560.0,
-                        ); // slightly narrower max width
-                        // IMPORTANT: pass navWidth into the nav widget and make that widget
-                        // occupy the full width so children can be spaced evenly.
+                          maxWidth * _navScreenFraction,
+                          _navMaxWidth,
+                        );
                         return SizedBox(
                           width: navWidth,
-                          child: _buildStunningNavigation(
-                            context,
-                            width: navWidth,
-                          ),
+                          child: _navBar(context, navWidth),
                         );
                       },
                     ),
@@ -181,11 +191,8 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
     );
   }
 
-  // Now accept width and ensure internal container fills that width and uses spaceEvenly
-  Widget _buildStunningNavigation(
-    BuildContext context, {
-    required double width,
-  }) {
+  // Build the nav bar's visual container and content.
+  Widget _navBar(BuildContext context, double width) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
     final isDark = theme.brightness == Brightness.dark;
@@ -193,327 +200,155 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // glow
-        AnimatedBuilder(
-          animation: _glowController,
-          builder: (context, _) {
-            return Container(
-              width: math.min(width, 440), // reduced max glow width
-              height: 64 + (_glowController.value * 6), // reduced height
+        // subtle background glow (low cost visual depth)
+        Container(
+          width: math.min(width, 420),
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(48),
+            boxShadow: [
+              BoxShadow(
+                color: primary.withOpacity(_glowOpacityBase),
+                blurRadius: _glowBlurBase,
+                spreadRadius: 1.0,
+              ),
+            ],
+          ),
+        ),
+
+        // frosted glass + content
+        ClipRRect(
+          borderRadius: BorderRadius.circular(40),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: _blurSigma, sigmaY: _blurSigma),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: _navVerticalPadding,
+              ),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(50),
-                boxShadow: [
-                  BoxShadow(
-                    color: primary.withOpacity(
-                      0.12 + (_glowController.value * 0.06),
-                    ),
-                    blurRadius: 30 + (_glowController.value * 8),
-                    spreadRadius: 1.5,
+                color: isDark
+                    ? Colors.black.withOpacity(0.26)
+                    : Colors.white.withOpacity(0.46),
+                borderRadius: BorderRadius.circular(40),
+                border: Border.all(
+                  width: 1.0,
+                  color: isDark
+                      ? Colors.white.withOpacity(0.06)
+                      : Colors.white.withOpacity(0.14),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _navIcon(
+                    icon: Icons.home_rounded,
+                    index: 0,
+                    primary: primary,
+                  ),
+                  _centerFAB(primary),
+                  _navIcon(
+                    icon: Icons.person_rounded,
+                    index: 2,
+                    primary: primary,
                   ),
                 ],
               ),
-            );
-          },
-        ),
-
-        ClipRRect(
-          borderRadius: BorderRadius.circular(40), // slightly tighter radius
-          child: Stack(
-            children: [
-              // animated gradient background
-              AnimatedBuilder(
-                animation: _particleController,
-                builder: (context, _) {
-                  return Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(40),
-                      gradient: LinearGradient(
-                        colors: [
-                          primary.withOpacity(0.06),
-                          primary.withOpacity(0.11),
-                          primary.withOpacity(0.05),
-                        ],
-                        begin: Alignment(
-                          -1 + (_particleController.value * 2),
-                          -1,
-                        ),
-                        end: Alignment(1 - (_particleController.value * 2), 1),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              // blur + content — MAKE THIS FILL the given width so internal Row can spaceEvenly
-              BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: 18,
-                  sigmaY: 18,
-                ), // reduced blur
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ), // reduced vertical padding
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.black.withOpacity(0.36)
-                        : Colors.white.withOpacity(0.58),
-                    borderRadius: BorderRadius.circular(40),
-                    border: Border.all(
-                      width: 1.0,
-                      color: isDark
-                          ? Colors.white.withOpacity(0.10)
-                          : Colors.white.withOpacity(0.24),
-                    ),
-                  ),
-                  // CRITICAL: use spaceEvenly so three controls are centered exactly
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildAnimatedIcon(
-                        icon: Icons.home_rounded,
-                        index: 0,
-                        label: 'Home',
-                      ),
-                      _buildCenterFAB(primary),
-                      _buildAnimatedIcon(
-                        icon: Icons.person_rounded,
-                        index: 2,
-                        label: 'Profile',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // shimmer sweep (shorter travel distance for reduced width)
-              AnimatedBuilder(
-                animation: _particleController,
-                builder: (context, _) {
-                  return Positioned(
-                    left: -100 + (_particleController.value * (width + 200)),
-                    top: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 100,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.white.withOpacity(0.0),
-                            Colors.white.withOpacity(0.07),
-                            Colors.white.withOpacity(0.0),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAnimatedIcon({
+  // Clean nav icon used for Home/Profile
+  Widget _navIcon({
     required IconData icon,
     required int index,
-    required String label,
+    required Color primary,
   }) {
     final bool active = safeIndex == index;
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
 
     return GestureDetector(
       onTap: () => _setIndex(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (active)
-              AnimatedBuilder(
-                animation: _glowController,
-                builder: (context, _) {
-                  return Container(
-                    width: 52 + (_glowController.value * 6),
-                    height: 52 + (_glowController.value * 6),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          primary.withOpacity(0.30),
-                          primary.withOpacity(0.02),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+      behavior: HitTestBehavior.translucent,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_activeController, _fabPulseController]),
+        builder: (context, _) {
+          // subtle scale when active or on interaction
+          final scale = active
+              ? (1.0 + (_activeController.value * 0.02))
+              : (0.94 + 0.06 * _activeController.value);
+
+          return Transform.scale(
+            scale: scale,
+            child: Container(
+              width: _iconContainerSize,
+              height: _iconContainerSize,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: active
+                    ? LinearGradient(
+                        colors: [primary, primary.withOpacity(0.85)],
+                      )
+                    : null,
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color: primary.withOpacity(0.18),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
               ),
-            AnimatedScale(
-              scale: active ? 1.02 : 0.94,
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutBack,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 260),
-                width: 44, // reduced icon container
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: active
-                      ? LinearGradient(
-                          colors: [primary, primary.withOpacity(0.75)],
-                        )
-                      : null,
-                  boxShadow: active
-                      ? [
-                          BoxShadow(
-                            color: primary.withOpacity(0.34),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (active)
-                      AnimatedBuilder(
-                        animation: _particleController,
-                        builder: (context, _) {
-                          return CustomPaint(
-                            size: const Size(44, 44),
-                            painter: _ParticlePainter(
-                              progress: _particleController.value,
-                              color: Colors.white,
-                            ),
-                          );
-                        },
-                      ),
-                    Icon(
-                      icon,
-                      color: active ? Colors.white : Colors.white70,
-                      size: 22,
-                    ), // reduced icon size
-                  ],
-                ),
+              child: Icon(
+                icon,
+                size: _iconSize,
+                color: active ? Colors.white : Colors.white.withOpacity(0.88),
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildCenterFAB(Color primary) {
+  // Center FAB: compact, slightly pulsing to attract attention without shouting.
+  Widget _centerFAB(Color primary) {
     return GestureDetector(
       onTap: () => _setIndex(1),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: _glowController,
-            builder: (context, _) {
-              return Container(
-                width: 72 + (_glowController.value * 8),
-                height: 72 + (_glowController.value * 8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      primary.withOpacity(
-                        0.40 + (_glowController.value * 0.08),
-                      ),
-                      primary.withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          AnimatedBuilder(
-            animation: _particleController,
-            builder: (context, _) {
-              return Transform.rotate(
-                angle: _particleController.value * 2 * math.pi,
-                child: Container(
-                  width: 66,
-                  height: 66,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: SweepGradient(
-                      colors: [
-                        primary.withOpacity(0.6),
-                        primary.withOpacity(0.0),
-                        primary.withOpacity(0.6),
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          ScaleTransition(
-            scale: Tween<double>(begin: 0.96, end: 1.0).animate(
-              CurvedAnimation(parent: _activeAnim, curve: Curves.easeOutBack),
-            ),
+      child: AnimatedBuilder(
+        animation: _fabPulseController,
+        builder: (context, _) {
+          final pulse = 1.0 + (_fabPulseController.value * 0.03); // small pulse
+          return Transform.scale(
+            scale: pulse,
             child: Container(
-              width: 60, // reduced FAB size
-              height: 60,
+              width: _fabSize,
+              height: _fabSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [primary, primary.withOpacity(0.85)],
+                  colors: [primary, primary.withOpacity(0.9)],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: primary.withOpacity(0.36),
-                    blurRadius: 14,
+                    color: primary.withOpacity(0.18),
+                    blurRadius: 18,
                     offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: const Center(
-                child: Icon(Icons.add, color: Colors.white, size: 30),
-              ), // slightly smaller icon
+                child: Icon(Icons.add, color: Colors.white, size: 26),
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
-}
-
-class _ParticlePainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  _ParticlePainter({required this.progress, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    final center = Offset(size.width / 2, size.height / 2);
-    const int particleCount = 6;
-    for (int i = 0; i < particleCount; i++) {
-      final angle =
-          (i / particleCount) * 2 * math.pi + (progress * 2 * math.pi);
-      final radius = 12 + (progress * 6); // reduced radius
-      final particleSize = 2.0 * (1 - progress); // slightly smaller particles
-      final x = center.dx + math.cos(angle) * radius;
-      final y = center.dy + math.sin(angle) * radius;
-      paint.color = color.withOpacity(0.9 * (1 - progress));
-      canvas.drawCircle(Offset(x, y), particleSize, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ParticlePainter oldDelegate) =>
-      progress != oldDelegate.progress;
 }
