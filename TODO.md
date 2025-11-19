@@ -1,0 +1,3 @@
+- [ ] Fix null safety for currentUser in toggleLikePost method
+- [ ] Change likes.contains(currentUser) to likes.contains(currentUser?.uid) in toggleLikePost and build method
+- [ ] Verify error handling for optimistic updates

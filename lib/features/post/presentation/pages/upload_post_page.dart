@@ -151,6 +151,7 @@ class _UploadPostPageState extends State<UploadPostPage> {
       text: _caption.text.trim(),
       imageUrl: '',
       timestamp: DateTime.now(),
+      likes: [],
     );
 
     try {

@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
 import 'package:loom/features/post/domain/entities/post.dart';
 import 'package:loom/features/post/presentation/cubits/post_cubit.dart';
 import 'package:loom/features/profile/domain/entities/profile_user.dart';
@@ -30,6 +30,9 @@ class _PostTileState extends State<PostTile> {
   // post user
   ProfileUser? postUser;
 
+  // current user
+  User? currentUser;
+
   // on startup
   @override
   void initState() {
@@ -40,8 +43,9 @@ class _PostTileState extends State<PostTile> {
   }
 
   void getCurrentUser() {
-    final authCubit = context.read<AuthCubit>();
-    final currentUser = authCubit.currentUser;
+    // Read firebase auth user directly. This avoids casting your app-specific user
+    // object (like AppUser) into Firebase's `User` which caused the TypeError.
+    currentUser = FirebaseAuth.instance.currentUser;
     isOwnPost = (widget.post.userId == currentUser?.uid);
   }
 
@@ -57,6 +61,43 @@ class _PostTileState extends State<PostTile> {
         postUser = fetchedUser;
       });
     }
+  }
+
+  /*
+
+  LIKES
+
+  */
+
+  // user tapped like button
+  void toggleLikePost() {
+    if (currentUser == null) return; // guard against null user
+
+    // current like status
+    final isLiked = widget.post.likes.contains(currentUser!.uid);
+
+    // optimistically like and update uid
+    setState(() {
+      if (isLiked) {
+        widget.post.likes.remove(currentUser!.uid); // unlike
+      } else {
+        widget.post.likes.add(currentUser!.uid); // like
+      }
+    });
+
+    // update likes
+    postCubit.toggleLikePost(widget.post.id, currentUser!.uid).catchError((
+      error,
+    ) {
+      // if there is an error, revert back to original values
+      setState(() {
+        if (isLiked) {
+          widget.post.likes.add(currentUser!.uid); // revert like
+        } else {
+          widget.post.likes.remove(currentUser!.uid); // revert unlike
+        }
+      });
+    });
   }
 
   // show options for Deletion
@@ -233,19 +274,44 @@ class _PostTileState extends State<PostTile> {
                 // action buttons
                 Row(
                   children: [
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(Icons.favorite_border, color: onSurface),
-                    ),
-                    const SizedBox(width: 4),
-                    Text("0", style: TextStyle(color: onSurface)),
+                    Row(
+                      children: [
+                        // like button (now IconButton for material feedback)
+                        IconButton(
+                          onPressed: toggleLikePost,
+                          icon: Icon(
+                            widget.post.likes.contains(currentUser?.uid ?? '')
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                          ),
+                          color:
+                              widget.post.likes.contains(currentUser?.uid ?? '')
+                              ? Colors.red
+                              : Colors.black, // <<< Black when not liked
+                          tooltip: 'Like',
+                        ),
 
-                    const SizedBox(width: 18),
+                        // <<< Same spacing as comment
+                        Text(
+                          widget.post.likes.length.toString(),
+                          style: TextStyle(
+                            color: Colors
+                                .black, // <<< Match icon color for consistency
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(width: 5),
+
+                    // comment button
                     IconButton(
                       onPressed: () {},
                       icon: Icon(Icons.comment_outlined, color: onSurface),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 1),
                     Text("0", style: TextStyle(color: onSurface)),
 
                     const Spacer(),
