@@ -152,6 +152,7 @@ class _UploadPostPageState extends State<UploadPostPage> {
       imageUrl: '',
       timestamp: DateTime.now(),
       likes: [],
+      comments: [],
     );
 
     try {
@@ -162,12 +163,18 @@ class _UploadPostPageState extends State<UploadPostPage> {
         await postCubit.createPost(post, imagePath: _pickedFile?.path);
       }
 
-      // success path: hide dialog and then navigate back once
+      // success path: hide dialog, clear fields, show success message
       _hideUploadingDialog();
 
       if (!mounted) return;
-      // go back to previous screen after upload success
-      Navigator.of(context).pop();
+      setState(() {
+        _pickedFile = null;
+        _webBytes = null;
+        _caption.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Post uploaded successfully!')),
+      );
     } catch (e) {
       debugPrint('upload err: $e');
       _hideUploadingDialog();

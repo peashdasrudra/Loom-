@@ -91,7 +91,7 @@ class _HomePageState extends State<HomePage> {
               context,
               MaterialPageRoute(builder: (_) => const UploadPostPage()),
             ),
-            icon: Icon(Icons.post_add, color: primary),
+            icon: Icon(Icons.search, color: primary),
             tooltip: 'Create post',
           ),
         ],

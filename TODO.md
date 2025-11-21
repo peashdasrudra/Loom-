@@ -1,3 +1,7 @@
-- [ ] Fix null safety for currentUser in toggleLikePost method
-- [ ] Change likes.contains(currentUser) to likes.contains(currentUser?.uid) in toggleLikePost and build method
-- [ ] Verify error handling for optimistic updates
+- [ ] Modify post_tile.dart to change post image aspect ratio to 1:1 for square size
+- [ ] Add state variable _showAllComments in PostTile to control comment display
+- [ ] Update comment display logic in post_tile.dart to show max 3 comments initially with "See more" option
+- [ ] Modify comment_tile.dart to include user profile image using CachedNetworkImage
+- [ ] Reduce padding in comment_tile.dart for a more compact, professional look
+- [ ] Add ProfileCubit and fetch comment user profile in comment_tile.dart
+- [ ] Update imports in comment_tile.dart for CachedNetworkImage and ProfileCubit

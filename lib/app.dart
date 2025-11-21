@@ -72,6 +72,42 @@ class App extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: lightMode,
 
+        // Register routes so pushNamed('/profile', ...) works across the app.
+        // This keeps navigation centralized and avoids missing route exceptions.
+        routes: {
+          // Keep the home route mapping (home is handled by the AuthBloc consumer below).
+          // We do not use '/' here to override the auth-driven home; the "home" property
+          // is driven by the BlocConsumer. We only provide named routes used across the app.
+          '/profile': (context) {
+            // Resolve uid from the RouteSettings arguments if provided,
+            // otherwise fall back to the currently authenticated user's uid.
+            final settings = ModalRoute.of(context)?.settings;
+            final args = settings?.arguments;
+            String uidFromArgs = '';
+            if (args is String && args.isNotEmpty) {
+              uidFromArgs = args;
+            } else {
+              try {
+                final authCubit = context.read<AuthCubit?>();
+                uidFromArgs = authCubit?.currentUser?.uid ?? '';
+              } catch (_) {
+                uidFromArgs = '';
+              }
+            }
+
+            // ProfilePage expects a uid param (used in your MainShell as well).
+            // If uid is empty, the ProfilePage should handle the empty-case gracefully,
+            // or you can adapt to your app's expected behavior.
+            return ProfilePage(uid: uidFromArgs);
+          },
+        },
+
+        // Optional: handle unknown routes gracefully instead of throwing.
+        onUnknownRoute: (settings) {
+          // fallback to a safe page (HomePage)
+          return MaterialPageRoute(builder: (_) => const HomePage());
+        },
+
         // Auth state decides whether to show Login or Main App UI
         home: BlocConsumer<AuthCubit, app_auth.AuthState>(
           builder: (context, authState) {

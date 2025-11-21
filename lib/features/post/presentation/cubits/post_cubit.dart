@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:loom/features/post/domain/entities/comment.dart';
 import 'package:loom/features/post/domain/entities/post.dart';
 import 'package:loom/features/post/domain/repos/post_repo.dart';
 
@@ -22,7 +23,7 @@ class PostCubit extends Cubit<PostState> {
     );
   }
 
-  // --------------------- CREATE POST ---------------------
+  //create a new post
   Future<void> createPost(
     Post post, {
     String? imagePath,
@@ -59,7 +60,7 @@ class PostCubit extends Cubit<PostState> {
     }
   }
 
-  // --------------------- FETCH POSTS ---------------------
+  // fetch all posts
   Future<void> fetchAllPosts() async {
     try {
       emit(PostsLoading());
@@ -70,7 +71,7 @@ class PostCubit extends Cubit<PostState> {
     }
   }
 
-  // --------------------- DELETE POST ---------------------
+  // delete a post
   Future<void> deletePost(String postId) async {
     try {
       await postRepo.deletePost(postId);
@@ -79,12 +80,34 @@ class PostCubit extends Cubit<PostState> {
     }
   }
 
-  // --------------------- TOGGLE LIKE ON A POST ---------------------
+  // toggle like in a post
   Future<void> toggleLikePost(String postId, String userId) async {
     try {
       await postRepo.toggleLikePost(postId, userId);
     } catch (e) {
       emit(PostsError("Failed to toggle like: $e"));
+    }
+  }
+
+  // add a comment to a Post
+  Future<void> addComment(String postId, Comment comment) async {
+    try {
+      await postRepo.addComment(postId, comment);
+
+      await fetchAllPosts();
+    } catch (e) {
+      emit(PostsError('Failed to add Comment: $e'));
+    }
+  }
+
+  // delete comment from a post
+  Future<void> deleteComment(String postId, commentId) async {
+    try {
+      await postRepo.deleteComment(postId, commentId);
+
+      await fetchAllPosts();
+    } catch (e) {
+      emit(PostsError("Failed to delete comment: $e"));
     }
   }
 }
