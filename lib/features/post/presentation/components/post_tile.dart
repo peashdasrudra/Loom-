@@ -1,3 +1,4 @@
+// lib/features/post/presentation/components/post_tile_final.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -11,14 +12,18 @@ import 'package:loom/features/post/presentation/cubits/post_states.dart';
 import 'package:loom/features/profile/domain/entities/profile_user.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_cubit.dart';
 import 'package:loom/features/auth/presentation/components/my_text_field.dart';
+import 'package:loom/features/profile/presentation/pages/profile_page.dart';
 
 /// post_tile_final.dart
-/// Final polished PostTile
-/// - square cover image (1:1) that fills card width
-/// - clean header, actions, and compact comment preview
-/// - configurable small design tokens at top of file
+/// Polished PostTile with compact comment preview and "See more / Show less".
+/// Minimal changes from your original file — mostly the comment preview section.
 
 const double _kAvatarSize = 44.0;
+
+/// Local fallback image (uploaded screenshot). Your environment may transform
+/// this path into a usable URL for previewing avatars locally.
+const String _localFallbackProfileImage =
+    '/mnt/data/ded303bf-de95-4a1b-850d-7615ac5be774.png';
 
 class PostTile extends StatefulWidget {
   final Post post;
@@ -29,7 +34,7 @@ class PostTile extends StatefulWidget {
   State<PostTile> createState() => _PostTileState();
 }
 
-class _PostTileState extends State<PostTile> {
+class _PostTileState extends State<PostTile> with TickerProviderStateMixin {
   late final PostCubit _postCubit;
   late final ProfileCubit _profileCubit;
 
@@ -75,10 +80,15 @@ class _PostTileState extends State<PostTile> {
       if (!mounted) return;
       setState(() {
         postUser = null;
-        _loadingProfile = false;
+        _loading_profile =
+            false; // this line intentionally kept consistent with original variable
       });
     }
   }
+
+  // NOTE: original variable name used _loadingProfile — ensure we use it consistently
+  bool get _loading_profile => _loadingProfile;
+  set _loading_profile(bool v) => _loadingProfile = v;
 
   @override
   void dispose() {
@@ -279,119 +289,126 @@ class _PostTileState extends State<PostTile> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: () => Navigator.of(
-                    context,
-                  ).pushNamed('/profile', arguments: widget.post.userId),
-                  borderRadius: BorderRadius.circular(32),
-                  child: Row(
-                    children: [
-                      if (_loadingProfile)
-                        Container(
-                          width: _kAvatarSize,
-                          height: _kAvatarSize,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.colorScheme.onSurface.withOpacity(
-                              0.04,
-                            ),
-                          ),
-                        )
-                      else if (postUser?.profileImageUrl != null &&
-                          postUser!.profileImageUrl.trim().isNotEmpty)
-                        CachedNetworkImage(
-                          imageUrl: postUser!.profileImageUrl,
-                          imageBuilder: (context, imageProvider) => Container(
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfilePage(uid: widget.post.userId),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(
+                children: [
+                  InkWell(
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed('/profile', arguments: widget.post.userId),
+                    borderRadius: BorderRadius.circular(32),
+                    child: Row(
+                      children: [
+                        if (_loadingProfile)
+                          Container(
                             width: _kAvatarSize,
                             height: _kAvatarSize,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              image: DecorationImage(
-                                image: imageProvider,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          placeholder: (_, __) => Container(
-                            width: _kAvatarSize,
-                            height: _kAvatarSize,
-                            alignment: Alignment.center,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.04,
                               ),
                             ),
-                            child: const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          // Use postUser.profileImageUrl when available, otherwise point to the local fallback.
+                          CachedNetworkImage(
+                            imageUrl:
+                                (postUser?.profileImageUrl != null &&
+                                    postUser!.profileImageUrl.trim().isNotEmpty)
+                                ? postUser!.profileImageUrl
+                                : _localFallbackProfileImage,
+                            imageBuilder: (context, imageProvider) => Container(
+                              width: _kAvatarSize,
+                              height: _kAvatarSize,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                image: DecorationImage(
+                                  image: imageProvider,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            placeholder: (_, __) => Container(
+                              width: _kAvatarSize,
+                              height: _kAvatarSize,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: theme.colorScheme.onSurface.withOpacity(
+                                  0.04,
+                                ),
+                              ),
+                              child: const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (_, __, ___) => CircleAvatar(
+                              radius: _kAvatarSize / 2,
+                              child: Icon(Icons.person),
                             ),
                           ),
-                          errorWidget: (_, __, ___) => CircleAvatar(
-                            radius: _kAvatarSize / 2,
-                            child: Icon(Icons.person),
-                          ),
+
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 240),
+                              child: Text(
+                                authorName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: onSurface,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _relativeTime(widget.post.timestamp),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'delete') _confirmDeletePost();
+                    },
+                    itemBuilder: (context) => [
+                      if (isOwnPost)
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Delete'),
                         )
                       else
-                        CircleAvatar(
-                          radius: _kAvatarSize / 2,
-                          backgroundColor: theme.colorScheme.onSurface
-                              .withOpacity(0.04),
-                          child: const Icon(Icons.person),
+                        const PopupMenuItem(
+                          value: 'report',
+                          child: Text('Report'),
                         ),
-
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: 240),
-                            child: Text(
-                              authorName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: onSurface,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _relativeTime(widget.post.timestamp),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: onSurface.withOpacity(0.6),
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
-                ),
-                const Spacer(),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'delete') _confirmDeletePost();
-                  },
-                  itemBuilder: (context) => [
-                    if (isOwnPost)
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Delete'),
-                      )
-                    else
-                      const PopupMenuItem(
-                        value: 'report',
-                        child: Text('Report'),
-                      ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -424,7 +441,10 @@ class _PostTileState extends State<PostTile> {
                           icon: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 250),
                             child: _isLikedByCurrentUser
-                                ? const Icon(Icons.favorite, key: ValueKey('liked'))
+                                ? const Icon(
+                                    Icons.favorite,
+                                    key: ValueKey('liked'),
+                                  )
                                 : const Icon(
                                     Icons.favorite_border,
                                     key: ValueKey('unliked'),
@@ -483,7 +503,7 @@ class _PostTileState extends State<PostTile> {
             ),
           ),
 
-          // Compact comments preview
+          // Compact comments preview — updated to behave like "your type"
           BlocBuilder<PostCubit, PostState>(
             builder: (context, state) {
               if (state is PostsLoaded) {
@@ -494,35 +514,54 @@ class _PostTileState extends State<PostTile> {
                 if (post.comments.isEmpty) return const SizedBox.shrink();
 
                 final allComments = post.comments;
+                final previewCount = 2; // match your desired compact preview
                 final commentsToShow = _showAllComments
                     ? allComments
-                    : allComments.take(3).toList(); // show 3 for denser layout
+                    : allComments.take(previewCount).toList();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ListView.builder(
-                      itemCount: commentsToShow.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemBuilder: (context, index) => CommentTile(
-                        comment: commentsToShow[index],
-                        compact: true,
+                    // Use AnimatedSize to smooth expansion/collapse (keeps layout tidy)
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.topCenter,
+                      child: ListView.separated(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: commentsToShow.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 4),
+                        itemBuilder: (context, index) => CommentTile(
+                          comment: commentsToShow[index],
+                          compact: true,
+                        ),
                       ),
                     ),
-                    if (allComments.length > 2 && !_showAllComments)
+
+                    // See more / Show less
+                    if (allComments.length > previewCount)
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12.0,
-                          vertical: 8.0,
+                        padding: const EdgeInsets.fromLTRB(
+                          12.0,
+                          6.0,
+                          12.0,
+                          12.0,
                         ),
                         child: GestureDetector(
-                          onTap: () => setState(() => _showAllComments = true),
+                          onTap: () => setState(
+                            () => _showAllComments = !_showAllComments,
+                          ),
+                          behavior: HitTestBehavior.opaque,
                           child: Text(
-                            'See more comments (${allComments.length - 2})',
+                            _showAllComments
+                                ? 'Show less'
+                                : 'See more comments (${allComments.length - previewCount})',
                             style: TextStyle(
                               color: primary,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
                             ),
                           ),
                         ),

@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/auth/domain/entities/app_user.dart';
 import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
+import 'package:loom/features/post/presentation/components/post_tile.dart';
+import 'package:loom/features/post/presentation/cubits/post_cubit.dart';
+import 'package:loom/features/post/presentation/cubits/post_states.dart';
 import 'package:loom/features/profile/presentation/components/bio_box.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_cubit.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_states.dart';
@@ -39,6 +42,9 @@ class _ProfilePageState extends State<ProfilePage>
     curve: Curves.easeOutBack,
   );
 
+  // Posts
+  int postsCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +63,7 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  TextStyle _titleStyle(BuildContext c) => TextStyle(
+  TextStyle _titleStyle(BuildContext c) => const TextStyle(
     color: Colors.black,
     fontWeight: FontWeight.w800,
     fontSize: 24,
@@ -86,9 +92,9 @@ class _ProfilePageState extends State<ProfilePage>
               elevation: 0,
               centerTitle: true,
               foregroundColor: theme.colorScheme.primary,
-              title: Text(
+              title: const Text(
                 "Profile",
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
               actions: [
                 IconButton(
@@ -222,8 +228,8 @@ class _ProfilePageState extends State<ProfilePage>
                                             EditProfilePage(user: user),
                                       ),
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(8.0),
                                       child: Icon(
                                         Icons.camera_alt,
                                         size: 18,
@@ -336,6 +342,48 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
 
                     const SizedBox(height: 40),
+
+                    // list of post from the user
+                    BlocBuilder<PostCubit, PostState>(
+                      builder: (context, state) {
+                        // posts loaded
+                        if (state is PostsLoaded) {
+                          // filter posts by user id
+                          final userPosts = state.posts
+                              .where((post) => post.userId == widget.uid)
+                              .toList();
+
+                          postsCount = userPosts.length;
+
+                          return ListView.builder(
+                            itemCount: postsCount,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemBuilder: (context, index) {
+                              // get individual posts
+                              final post = userPosts[index];
+
+                              // return as post tile ui
+                              return PostTile(
+                                post: post,
+                                onDeletePressed: () => context
+                                    .read<PostCubit>()
+                                    .deletePost(post.id),
+                              );
+                            },
+                          );
+                        }
+                        // posts Loading
+                        else if (state is PostsLoading) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        } else {
+                          // <-- FIXED: previously this branch constructed a Center but did not return it.
+                          return const Center(child: Text("No Posts... "));
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),
