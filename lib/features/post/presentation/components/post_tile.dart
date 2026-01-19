@@ -87,7 +87,6 @@ class _PostTileState extends State<PostTile> with TickerProviderStateMixin {
   }
 
   // NOTE: original variable name used _loadingProfile — ensure we use it consistently
-  bool get _loading_profile => _loadingProfile;
   set _loading_profile(bool v) => _loadingProfile = v;
 
   @override

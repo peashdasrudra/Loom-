@@ -1,5 +1,3 @@
-// lib/features/profile/presentation/cubits/profile_cubit.dart
-
 import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/profile/domain/entities/profile_user.dart';
@@ -14,7 +12,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   ProfileCubit({required this.profileRepo, required this.storageRepo})
     : super(ProfileInitial());
 
-  // Fetch Profile User Data using repo -> useful for landing profile pages
+  // Fetch Profile User Data
   Future<void> fetchProfileUser(String uid) async {
     emit(ProfileLoading());
     try {
@@ -29,10 +27,9 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
-  // return user Profile given uid => useful for loadingm+ many profiles for post
+  // Get profile for other features (posts, comments, etc.)
   Future<ProfileUser?> getUserProfile(String uid) async {
-    final user = await profileRepo.getProfileUser(uid);
-    return user;
+    return profileRepo.getProfileUser(uid);
   }
 
   // Update Profile User Data
@@ -42,12 +39,10 @@ class ProfileCubit extends Cubit<ProfileState> {
     Uint8List? imageWebBytes,
     String? imageMobilePath,
   }) async {
-    print('ProfileCubit: updateProfile called for uid=$uid');
     emit(ProfileLoading());
+
     try {
       final currentUser = await profileRepo.getProfileUser(uid);
-      print('ProfileCubit: currentUser fetched -> $currentUser');
-
       if (currentUser == null) {
         emit(ProfileError('Failed to fetch current user data'));
         return;
@@ -55,23 +50,26 @@ class ProfileCubit extends Cubit<ProfileState> {
 
       String? imageDownloadUrl;
 
-      // upload image if present
+      // Upload image if provided
       if (imageWebBytes != null || imageMobilePath != null) {
-        print('ProfileCubit: uploading image...');
+        const fileName = 'profile'; // ✅ REQUIRED third argument
+
         if (imageMobilePath != null) {
           imageDownloadUrl = await storageRepo.uploadProfileImageMobile(
             imageMobilePath,
             uid,
+            fileName,
           );
         } else if (imageWebBytes != null) {
           imageDownloadUrl = await storageRepo.uploadProfileImageWeb(
             imageWebBytes,
             uid,
+            fileName,
           );
         }
-        print('ProfileCubit: image upload returned -> $imageDownloadUrl');
+
         if (imageDownloadUrl == null) {
-          emit(ProfileError("Failed to upload image"));
+          emit(ProfileError('Failed to upload profile image'));
           return;
         }
       }
@@ -81,22 +79,18 @@ class ProfileCubit extends Cubit<ProfileState> {
         newProfileImageUrl: imageDownloadUrl ?? currentUser.profileImageUrl,
       );
 
-      print('ProfileCubit: updating profile in repo -> $updatedProfile');
-
       await profileRepo.updateProfile(updatedProfile);
 
-      // Emit updated profile immediately so EditProfilePage can pop.
+      // Emit updated state immediately
       emit(ProfileLoaded(updatedProfile));
 
-      // Attempt to refresh from server asynchronously (optional).
+      // Optional refresh
       try {
         await fetchProfileUser(uid);
-      } catch (e) {
-        print('ProfileCubit: fetchProfileUser after update failed: $e');
-      }
+      } catch (_) {}
     } catch (e, st) {
-      print('ProfileCubit: Error Updating Profile: $e\n$st');
-      emit(ProfileError('Error Updating Profile: $e'));
+      print('ProfileCubit error: $e\n$st');
+      emit(ProfileError('Error updating profile'));
     }
   }
 }

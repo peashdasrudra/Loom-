@@ -34,17 +34,25 @@ class PostCubit extends Cubit<PostState> {
     try {
       // Namespaced filename inside Supabase bucket
       // example: "user123/1700000000000"
-      final filename = '${post.userId}/${post.id}';
+      final filename = post.id;
 
       // ----------------- MOBILE -----------------
       if (imagePath != null) {
         emit(PostsUploading());
-        imageUrl = await storageRepo.uploadPostImageMobile(imagePath, filename);
+        imageUrl = await storageRepo.uploadPostImageMobile(
+          imagePath,
+          post.userId,
+          filename,
+        );
       }
       // ----------------- WEB --------------------
       else if (imageBytes != null) {
         emit(PostsUploading());
-        imageUrl = await storageRepo.uploadPostImageWeb(imageBytes, filename);
+        imageUrl = await storageRepo.uploadPostImageWeb(
+          imageBytes,
+          post.userId,
+          filename,
+        );
       }
 
       // Build final post with the uploaded image URL
