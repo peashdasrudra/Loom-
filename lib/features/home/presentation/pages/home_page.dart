@@ -1,9 +1,3 @@
-// lib/features/home/presentation/pages/home_page.dart
-// Production-ready HomePage that works with MainShell:
-// - opens MainShell drawer via MainShell.scaffoldKey
-// - reserves bottom padding using MainShell.navBaseHeight
-// - merges new posts on refresh (no reload of older posts)
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loom/features/home/presentation/components/main_shell.dart';

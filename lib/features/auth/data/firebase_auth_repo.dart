@@ -4,34 +4,45 @@ import 'package:loom/features/auth/domain/entities/app_user.dart';
 import 'package:loom/features/auth/domain/repos/auth_repo.dart';
 
 class FirebaseAuthRepo implements AuthRepo {
-  final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   Future<AppUser?> loginWithEmailPassword(String email, String password) async {
     try {
-      //attempt to sign in
-      UserCredential userCredential = await firebaseAuth
-          .signInWithEmailAndPassword(email: email, password: password);
-
-      // fetch user document from firestore
-      DocumentSnapshot userDoc = await firestore
-          .collection("users")
-          .doc(userCredential.user!.uid)
-          .get();
-
-      AppUser user = AppUser(
-        uid: userCredential.user!.uid,
+      final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
-        name: userDoc["name"],
+        password: password,
       );
 
-      // return user
-      return user;
-    }
-    //  catch any errors
-    catch (e) {
-      throw Exception('Login failed: $e');
+      final firebaseUser = userCredential.user;
+      if (firebaseUser == null) return null;
+
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        throw Exception('User record not found');
+      }
+
+      final data = userDoc.data() as Map<String, dynamic>;
+
+      return AppUser(
+        uid: firebaseUser.uid,
+        email: firebaseUser.email ?? email,
+        name: data['name'] ?? '',
+        bio: data['bio'] ?? '',
+        profileImageUrl: data['profileImageUrl'] ?? '',
+        followers: List<String>.from(data['followers'] ?? const []),
+      );
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_mapAuthError(e));
+    } on FirebaseException catch (e) {
+      throw Exception('Database error: ${e.message}');
+    } catch (e) {
+      throw Exception('Login failed');
     }
   }
 
@@ -42,56 +53,82 @@ class FirebaseAuthRepo implements AuthRepo {
     String password,
   ) async {
     try {
-      //attempt to sign in
-      UserCredential userCredential = await firebaseAuth
-          .createUserWithEmailAndPassword(email: email, password: password);
-      AppUser user = AppUser(
-        uid: userCredential.user!.uid,
+      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
-        name: name,
+        password: password,
       );
 
-      // save user data in firestore
-      await firestore.collection("users").doc(user.uid).set(user.toJson());
+      final firebaseUser = userCredential.user;
+      if (firebaseUser == null) return null;
 
-      // return user
+      final user = AppUser(
+        uid: firebaseUser.uid,
+        email: email,
+        name: name,
+        bio: '',
+        profileImageUrl: '',
+        followers: const [],
+      );
+
+      await _firestore.collection('users').doc(user.uid).set(user.toJson());
+
       return user;
-    }
-    //  catch any errors
-    catch (e) {
-      throw Exception('Register failed: $e');
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_mapAuthError(e));
+    } on FirebaseException catch (e) {
+      throw Exception('Database error: ${e.message}');
+    } catch (_) {
+      throw Exception('Registration failed');
     }
   }
 
   @override
   Future<void> logout() async {
-    await firebaseAuth.signOut();
+    await _firebaseAuth.signOut();
   }
 
   @override
   Future<AppUser?> getCurrentUser() async {
-    // get current logged in user from firebase
-    final firebaseUser = firebaseAuth.currentUser;
+    try {
+      final firebaseUser = _firebaseAuth.currentUser;
+      if (firebaseUser == null) return null;
 
-    if (firebaseUser == null) {
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+
+      if (!userDoc.exists) return null;
+
+      final data = userDoc.data() as Map<String, dynamic>;
+
+      return AppUser(
+        uid: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        name: data['name'] ?? '',
+        bio: data['bio'] ?? '',
+        profileImageUrl: data['profileImageUrl'] ?? '',
+        followers: List<String>.from(data['followers'] ?? const []),
+      );
+    } catch (_) {
       return null;
     }
+  }
 
-    // fetch user document from firestore
-    DocumentSnapshot userDoc = await firestore.collection(
-      "users",
-    ).doc(firebaseUser.uid).get();
-
-    // check if the user doc exists
-    if (!userDoc.exists) {
-      return null;
+  String _mapAuthError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'user-not-found':
+        return 'No account found with this email';
+      case 'wrong-password':
+        return 'Incorrect password';
+      case 'email-already-in-use':
+        return 'Email already in use';
+      case 'invalid-email':
+        return 'Invalid email address';
+      case 'weak-password':
+        return 'Password is too weak';
+      default:
+        return 'Authentication failed';
     }
-
-    //user exists
-    return AppUser(
-      uid: firebaseUser.uid,
-      email: firebaseUser.email!,
-      name: userDoc["name"],
-    );
   }
 }

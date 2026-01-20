@@ -1,53 +1,60 @@
-import 'package:loom/features/auth/domain/entities/app_user.dart';
-
-class ProfileUser extends AppUser {
+class ProfileUser {
+  final String uid;
+  final String name;
+  final String email;
   final String bio;
   final String profileImageUrl;
+  final List<String> followers;
+  final List<String> following;
 
   ProfileUser({
-    required  super.uid,
-    required super.email,
-    required super.name,
+    required this.uid,
+    required this.name,
+    required this.email,
     required this.bio,
     required this.profileImageUrl,
+    required this.followers,
+    required this.following,
   });
 
-  // method to update profile user details
   ProfileUser copyWith({
-    String? newBio,
-    String? newProfileImageUrl,
+    String? name,
+    String? bio,
+    String? profileImageUrl,
+    List<String>? followers,
+    List<String>? following,
   }) {
     return ProfileUser(
       uid: uid,
+      name: name ?? this.name,
       email: email,
-      name: name,
-      bio: newBio ?? bio,
-      profileImageUrl: newProfileImageUrl ??  profileImageUrl,
+      bio: bio ?? this.bio,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      followers: followers ?? List.from(this.followers),
+      following: following ?? List.from(this.following),
     );
   }
 
-  // Convert Profile User -> json
-  @override
-  Map<String, dynamic> toJson(){
-    return{
-      'uid': uid,
-      'email': email,
-      'name': name,
-      'bio': bio,
-      'profileImageUrl': profileImageUrl,
-    };
-  }
-
-  // Convert json -> Profile User
-  factory ProfileUser.fromJson (Map<String, dynamic> json){
+  factory ProfileUser.fromJson(String uid, Map<String, dynamic> json) {
     return ProfileUser(
-      uid: json['uid'],
-      email: json['email'],
-      name: json['name'],
+      uid: uid,
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
       bio: json['bio'] ?? '',
       profileImageUrl: json['profileImageUrl'] ?? '',
+      followers: List<String>.from(json['followers'] ?? []),
+      following: List<String>.from(json['following'] ?? []),
     );
   }
 
-
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'email': email,
+      'bio': bio,
+      'profileImageUrl': profileImageUrl,
+      'followers': followers,
+      'following': following,
+    };
+  }
 }

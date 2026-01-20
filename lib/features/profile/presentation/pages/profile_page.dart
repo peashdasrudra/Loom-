@@ -3,12 +3,18 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:loom/features/auth/domain/entities/app_user.dart';
+import 'package:loom/features/profile/presentation/pages/followers_page.dart';
+
 import 'package:loom/features/auth/presentation/cubits/auth_cubit.dart';
+
 import 'package:loom/features/post/presentation/components/post_tile.dart';
 import 'package:loom/features/post/presentation/cubits/post_cubit.dart';
 import 'package:loom/features/post/presentation/cubits/post_states.dart';
+import 'package:loom/features/profile/domain/entities/profile_user.dart';
+
 import 'package:loom/features/profile/presentation/components/bio_box.dart';
+import 'package:loom/features/profile/presentation/components/follow_button.dart';
+import 'package:loom/features/profile/presentation/components/profile_stats.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_cubit.dart';
 import 'package:loom/features/profile/presentation/cubits/profile_states.dart';
 import 'package:loom/features/profile/presentation/pages/edit_profile_page.dart';
@@ -24,14 +30,9 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
-  // Cubits
-  late final authCubit = context.read<AuthCubit>();
-  late final profileCubit = context.read<ProfileCubit>();
+  late final ProfileCubit _profileCubit = context.read<ProfileCubit>();
+  late final AuthCubit _authCubit = context.read<AuthCubit>();
 
-  // Current User (from auth)
-  late AppUser? currentUser = authCubit.currentUser;
-
-  // Animation controller for scale transition
   late final AnimationController _animController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 450),
@@ -42,16 +43,11 @@ class _ProfilePageState extends State<ProfilePage>
     curve: Curves.easeOutBack,
   );
 
-  // Posts
-  int postsCount = 0;
-
   @override
   void initState() {
     super.initState();
-    // fetch profile for the requested uid
-    profileCubit.fetchProfileUser(widget.uid);
+    _profileCubit.fetchProfileUser(widget.uid);
 
-    // start animation after frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _animController.forward();
     });
@@ -63,173 +59,171 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  TextStyle _titleStyle(BuildContext c) => const TextStyle(
-    color: Colors.black,
-    fontWeight: FontWeight.w800,
-    fontSize: 24,
-    letterSpacing: 0.2,
-  );
+  void _onFollowPressed(ProfileUser profileUser) {
+    final currentUser = _authCubit.currentUser;
+    if (currentUser == null) return;
 
-  TextStyle _subtitleStyle(BuildContext c) => TextStyle(
-    color: Theme.of(c).colorScheme.primary.withOpacity(0.85),
-    fontSize: 14,
-  );
+    final isFollowing = profileUser.followers.contains(currentUser.uid);
+
+    // Optimistic UI update
+    setState(() {
+      if (isFollowing) {
+        profileUser.followers.remove(currentUser.uid);
+      } else {
+        profileUser.followers.add(currentUser.uid);
+      }
+    });
+
+    // Perform actual follow toggle
+    _profileCubit.toggleFollow(currentUser.uid, profileUser.uid).catchError((
+      _,
+    ) {
+      // Revert on error
+      setState(() {
+        if (isFollowing) {
+          profileUser.followers.add(currentUser.uid);
+        } else {
+          profileUser.followers.remove(currentUser.uid);
+        }
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currentUser = _authCubit.currentUser;
 
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
-        // loaded profile
-        if (state is ProfileLoaded) {
-          final user = state.profileUser;
+        if (state is ProfileLoading) {
+          return _loadingScaffold();
+        }
 
-          return Scaffold(
-            backgroundColor: theme.scaffoldBackgroundColor,
-            appBar: AppBar(
-              backgroundColor: theme.scaffoldBackgroundColor,
-              elevation: 0,
-              centerTitle: true,
-              foregroundColor: theme.colorScheme.primary,
-              title: const Text(
-                "Profile",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              actions: [
+        if (state is! ProfileLoaded) {
+          return _errorScaffold();
+        }
+
+        final user = state.profileUser;
+
+        final bool isOwnProfile =
+            currentUser != null && currentUser.uid == user.uid;
+
+        final bool isFollowing =
+            currentUser != null && user.followers.contains(currentUser.uid);
+
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            centerTitle: true,
+            elevation: 0,
+            title: const Text(
+              'Profile',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            actions: [
+              if (isOwnProfile)
                 IconButton(
+                  icon: const Icon(Icons.edit),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditProfilePage(user: user),
+                      builder: (_) => EditProfilePage(user: user),
                     ),
                   ),
-                  icon: const Icon(Icons.edit),
                 ),
-              ],
-            ),
-
-            // use scroll view so smaller screens / long bios work well
-            body: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 18,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // top: name + email centered
-                    Center(
-                      child: Column(
-                        children: [
-                          Text(user.name, style: _titleStyle(context)),
-                          const SizedBox(height: 6),
-                          Text(
-                            user.email,
-                            style: _subtitleStyle(context),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // animated profile image with hero and camera icon
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditProfilePage(user: user),
+            ],
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Name & email
+                  Center(
+                    child: Column(
+                      children: [
+                        Text(
+                          user.name,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        child: ScaleTransition(
-                          scale: _scaleAnim,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Hero(
-                                tag: 'profile_image_${user.uid}',
-                                child: Container(
-                                  height: 160,
-                                  width: 160,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        theme.colorScheme.primary.withOpacity(
-                                          0.06,
-                                        ),
-                                        theme.colorScheme.primary.withOpacity(
-                                          0.02,
-                                        ),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
+                        const SizedBox(height: 6),
+                        Text(
+                          user.email,
+                          style: TextStyle(
+                            color: theme.colorScheme.primary.withOpacity(0.85),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // Profile image
+                  Center(
+                    child: GestureDetector(
+                      onTap: isOwnProfile
+                          ? () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EditProfilePage(user: user),
+                              ),
+                            )
+                          : null,
+                      child: ScaleTransition(
+                        scale: _scaleAnim,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Hero(
+                              tag: 'profile_image_${user.uid}',
+                              child: Container(
+                                height: 160,
+                                width: 160,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 8),
+                                      color: Colors.black.withOpacity(0.08),
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  clipBehavior: Clip.hardEdge,
-                                  child: CachedNetworkImage(
-                                    // cache-buster so newly uploaded images show immediately
-                                    imageUrl:
-                                        "${user.profileImageUrl}?v=${DateTime.now().millisecondsSinceEpoch}",
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Container(
-                                      color: theme.colorScheme.onBackground
-                                          .withOpacity(0.03),
-                                    ),
-                                    errorWidget: (context, url, error) =>
-                                        Container(
-                                          color: theme.colorScheme.onBackground
-                                              .withOpacity(0.03),
-                                          child: Icon(
-                                            Icons.person,
-                                            size: 72,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                        ),
-                                    imageBuilder: (context, imageProvider) =>
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            image: DecorationImage(
-                                              image: imageProvider,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        ),
-                                  ),
+                                  ],
+                                ),
+                                clipBehavior: Clip.hardEdge,
+                                child: CachedNetworkImage(
+                                  imageUrl: user.profileImageUrl,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) =>
+                                      Container(color: Colors.black12),
+                                  errorWidget: (_, __, ___) =>
+                                      const Icon(Icons.person, size: 72),
                                 ),
                               ),
-
-                              // bottom-right transparent camera icon (keeps same functionality)
+                            ),
+                            if (isOwnProfile)
                               Positioned(
                                 right: 0,
                                 bottom: -6,
                                 child: Material(
                                   color: Colors.black.withOpacity(0.45),
-                                  elevation: 2,
                                   shape: const CircleBorder(),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(999),
                                     onTap: () => Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) =>
+                                        builder: (_) =>
                                             EditProfilePage(user: user),
                                       ),
                                     ),
                                     child: const Padding(
-                                      padding: EdgeInsets.all(8.0),
+                                      padding: EdgeInsets.all(8),
                                       child: Icon(
                                         Icons.camera_alt,
                                         size: 18,
@@ -239,186 +233,143 @@ class _ProfilePageState extends State<ProfilePage>
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Info card (bio + small stats placeholder)
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      elevation: 3,
-                      margin: EdgeInsets.zero,
-                      color: theme.colorScheme.surface,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18.0,
-                          vertical: 16.0,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Bio label and content
-                            Row(
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    'Bio',
-                                    style: TextStyle(
-                                      color: theme.colorScheme.primary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-
-                            // use your existing BioBox widget for the bio content
-                            BioBox(text: user.bio),
-
-                            const SizedBox(height: 14),
-
-                            // subtle divider to separate bio from other info (keeps layout same)
-                            Divider(
-                              color: theme.colorScheme.onBackground.withOpacity(
-                                0.06,
-                              ),
-                              height: 1,
-                            ),
                           ],
                         ),
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 22),
+                  const SizedBox(height: 28),
 
-                    // Posts header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Posts',
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                  // Stats
+                  ProfileStats(
+                    posts: context.select<PostCubit, int>(
+                      (cubit) => cubit.state is PostsLoaded
+                          ? (cubit.state as PostsLoaded).posts
+                                .where((p) => p.userId == user.uid)
+                                .length
+                          : 0,
+                    ),
+                    followers: user.followers.length,
+                    following: user.following.length,
+                    onFollowersTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FollowersPage(
+                            ids: user.followers,
+                            title: 'Followers',
                           ),
                         ),
-                        // small edit quick-link to posts (keeps original edit behavior unchanged)
-                        IconButton(
-                          onPressed: () {
-                            // kept intentionally light — matches previous behavior
-                          },
-                          icon: Icon(
-                            Icons.grid_view,
-                            color: theme.colorScheme.primary,
+                      );
+                    },
+                    onFollowingTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FollowersPage(
+                            ids: user.following,
+                            title: 'Following',
                           ),
                         ),
-                      ],
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Follow button
+                  if (!isOwnProfile && currentUser != null)
+                    FollowButton(
+                      isFollowing: isFollowing,
+                      onPressed: () => _onFollowPressed(user),
                     ),
 
-                    // placeholder area for posts list (your home page shows full posts; keep this short)
-                    Container(
-                      height: 80,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.onBackground.withOpacity(0.02),
-                        borderRadius: BorderRadius.circular(10),
+                  const SizedBox(height: 30),
+
+                  // Bio card
+                  Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Bio',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          BioBox(text: user.bio),
+                        ],
                       ),
-                      child: Center(
-                        child: Text(
-                          'User posts appear in Home screen list',
-                          style: TextStyle(color: theme.colorScheme.primary),
-                        ),
-                      ),
                     ),
+                  ),
 
-                    const SizedBox(height: 40),
+                  const SizedBox(height: 24),
 
-                    // list of post from the user
-                    BlocBuilder<PostCubit, PostState>(
-                      builder: (context, state) {
-                        // posts loaded
-                        if (state is PostsLoaded) {
-                          // filter posts by user id
-                          final userPosts = state.posts
-                              .where((post) => post.userId == widget.uid)
-                              .toList();
+                  const Text(
+                    'Posts',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  ),
 
-                          postsCount = userPosts.length;
+                  const SizedBox(height: 8),
 
-                          return ListView.builder(
-                            itemCount: postsCount,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              // get individual posts
-                              final post = userPosts[index];
+                  BlocBuilder<PostCubit, PostState>(
+                    builder: (context, postState) {
+                      if (postState is PostsLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                              // return as post tile ui
-                              return PostTile(
-                                post: post,
-                                onDeletePressed: () => context
-                                    .read<PostCubit>()
-                                    .deletePost(post.id),
-                              );
-                            },
+                      if (postState is! PostsLoaded) {
+                        return const Center(child: Text('No posts'));
+                      }
+
+                      final userPosts = postState.posts
+                          .where((p) => p.userId == user.uid)
+                          .toList();
+
+                      if (userPosts.isEmpty) {
+                        return const Center(child: Text('No posts yet'));
+                      }
+
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: userPosts.length,
+                        itemBuilder: (_, index) {
+                          final post = userPosts[index];
+                          return PostTile(
+                            post: post,
+                            onDeletePressed: isOwnProfile
+                                ? () => context.read<PostCubit>().deletePost(
+                                    post.id,
+                                  )
+                                : null,
                           );
-                        }
-                        // posts Loading
-                        else if (state is PostsLoading) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        } else {
-                          // <-- FIXED: previously this branch constructed a Center but did not return it.
-                          return const Center(child: Text("No Posts... "));
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
-          );
-        }
-        // Loading state
-        else if (state is ProfileLoading) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text(
-                "Profile",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              centerTitle: true,
-            ),
-            body: const Center(child: CircularProgressIndicator()),
-          );
-        }
-        // Error / initial state
-        else {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text(
-                "Profile",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              centerTitle: true,
-            ),
-            body: const Center(child: Text('Unable to load profile')),
-          );
-        }
+          ),
+        );
       },
     );
   }
+
+  Scaffold _loadingScaffold() =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
+
+  Scaffold _errorScaffold() =>
+      const Scaffold(body: Center(child: Text('Unable to load profile')));
 }

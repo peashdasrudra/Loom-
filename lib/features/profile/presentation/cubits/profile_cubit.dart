@@ -1,96 +1,71 @@
-import 'dart:typed_data';
+// lib/features/profile/presentation/cubits/profile_cubit.dart
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:loom/features/profile/domain/entities/profile_user.dart';
 import 'package:loom/features/profile/domain/repos/profile_repo.dart';
-import 'package:loom/features/profile/presentation/cubits/profile_states.dart';
-import 'package:loom/features/storage/domain/storage_repo.dart';
+import 'package:loom/features/storage/data/supabase_storage_repo.dart';
+import 'profile_states.dart';
 
 class ProfileCubit extends Cubit<ProfileState> {
   final ProfileRepo profileRepo;
-  final StorageRepo storageRepo;
+  final SupabaseStorageRepo storageRepo;
 
   ProfileCubit({required this.profileRepo, required this.storageRepo})
     : super(ProfileInitial());
 
-  // Fetch Profile User Data
   Future<void> fetchProfileUser(String uid) async {
     emit(ProfileLoading());
-    try {
-      final user = await profileRepo.getProfileUser(uid);
-      if (user != null) {
-        emit(ProfileLoaded(user));
-      } else {
-        emit(ProfileError('User not found'));
-      }
-    } catch (e) {
-      emit(ProfileError(e.toString()));
+    final user = await profileRepo.getProfileUser(uid);
+    if (user == null) {
+      emit(ProfileError(message: 'Profile not found'));
+    } else {
+      emit(ProfileLoaded(user));
     }
   }
 
-  // Get profile for other features (posts, comments, etc.)
-  Future<ProfileUser?> getUserProfile(String uid) async {
-    return profileRepo.getProfileUser(uid);
+  Future<void> toggleFollow(String currentUserId, String targetUserId) async {
+    await profileRepo.toggleFollow(currentUserId, targetUserId);
   }
 
-  // Update Profile User Data
   Future<void> updateProfile({
     required String uid,
     String? newBio,
-    Uint8List? imageWebBytes,
     String? imageMobilePath,
+    Uint8List? imageWebBytes,
   }) async {
-    emit(ProfileLoading());
+    final currentState = state;
+    if (currentState is! ProfileLoaded) return;
 
-    try {
-      final currentUser = await profileRepo.getProfileUser(uid);
-      if (currentUser == null) {
-        emit(ProfileError('Failed to fetch current user data'));
-        return;
-      }
+    String imageUrl = currentState.profileUser.profileImageUrl;
 
-      String? imageDownloadUrl;
-
-      // Upload image if provided
-      if (imageWebBytes != null || imageMobilePath != null) {
-        const fileName = 'profile'; // ✅ REQUIRED third argument
-
-        if (imageMobilePath != null) {
-          imageDownloadUrl = await storageRepo.uploadProfileImageMobile(
-            imageMobilePath,
-            uid,
-            fileName,
-          );
-        } else if (imageWebBytes != null) {
-          imageDownloadUrl = await storageRepo.uploadProfileImageWeb(
-            imageWebBytes,
-            uid,
-            fileName,
-          );
-        }
-
-        if (imageDownloadUrl == null) {
-          emit(ProfileError('Failed to upload profile image'));
-          return;
-        }
-      }
-
-      final updatedProfile = currentUser.copyWith(
-        newBio: newBio ?? currentUser.bio,
-        newProfileImageUrl: imageDownloadUrl ?? currentUser.profileImageUrl,
+    if (imageMobilePath != null) {
+      final uploadedUrl = await storageRepo.uploadProfileImageMobile(
+        imageMobilePath,
+        uid,
+        'profile',
       );
 
-      await profileRepo.updateProfile(updatedProfile);
+      if (uploadedUrl != null) {
+        imageUrl = uploadedUrl;
+      }
+    } else if (imageWebBytes != null) {
+      final uploadedUrl = await storageRepo.uploadProfileImageWeb(
+        imageWebBytes,
+        uid,
+        'profile',
+      );
 
-      // Emit updated state immediately
-      emit(ProfileLoaded(updatedProfile));
-
-      // Optional refresh
-      try {
-        await fetchProfileUser(uid);
-      } catch (_) {}
-    } catch (e, st) {
-      print('ProfileCubit error: $e\n$st');
-      emit(ProfileError('Error updating profile'));
+      if (uploadedUrl != null) {
+        imageUrl = uploadedUrl;
+      }
     }
+
+    final updatedUser = currentState.profileUser.copyWith(
+      bio: newBio,
+      profileImageUrl: imageUrl,
+    );
+
+    await profileRepo.updateProfile(updatedUser);
+    emit(ProfileLoaded(updatedUser));
   }
 }
